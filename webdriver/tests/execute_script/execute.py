@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from webdriver.transport import Response
@@ -94,3 +96,15 @@ def test_abort_by_user_prompt_twice(session, dialog_type):
     assert session.alert.text == "Bye"
 
     session.alert.accept()
+
+
+@pytest.mark.parametrize("string", [u"\u0000",
+                                    u"\uD800",
+                                    u"\uDFFF",
+                                    u"\uFEFF",
+                                    u"\uFFFE",
+                                    u"\uFFFF",
+                                    u"\U0010FFFF"])
+def test_return_awkward_string(session, string):
+    response = execute_script(session, u"return %s" % json.dumps(string))
+    assert_success(response, string)
