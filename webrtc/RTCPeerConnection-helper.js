@@ -340,10 +340,8 @@ function waitForConnectionStateChange(pc, wantedStates) {
   });
 }
 
-// Returns a promise that resolves when |pc.connectionState| is in one of the
-// wanted states.
-function waitForConnectionStateChange(pc, wantedStates) {
-  return new Promise((resolve) => {
+function waitForConnectionStateChangeWithTimeout(t, pc, wantedStates, timeout) {
+  return new Promise((resolve, reject) => {
     if (wantedStates.includes(pc.connectionState)) {
       resolve();
       return;
@@ -352,6 +350,7 @@ function waitForConnectionStateChange(pc, wantedStates) {
       if (wantedStates.includes(pc.connectionState))
         resolve();
     });
+    t.step_timeout(reject, timeout);
   });
 }
 
