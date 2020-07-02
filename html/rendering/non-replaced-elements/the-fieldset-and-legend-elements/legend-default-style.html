@@ -11,6 +11,7 @@
   /* TODO: uncomment this when these properties are widely supported
   padding-inline-start: 2px; padding-inline-end: 2px;
   */
+  legend: auto;
 }
 </style>
 
@@ -37,16 +38,19 @@ setup(() => {
                 'paddingBottom',
                 'paddingLeft',
                 'overflow',
+                '-webkit-appearance',
                 // Extra tests
                 'height',
                 'box-sizing',
+                'legend',
                ];
 });
 legends.forEach(legend => {
   const testStyle = getComputedStyle(legend);
   props.forEach(prop => {
     test(() => {
-      assert_equals(testStyle[prop], refStyle[prop]);
+      const expected = prop === 'legend' ? 'auto' : refStyle[prop];
+      assert_equals(testStyle[prop], expected);
     }, `${legend.id}: ${prop}`);
   });
 
