@@ -101,34 +101,22 @@ function globalOf(func)
     return self;
 }
 
-function throwOrReject(a_test, operation, fn, obj, args, message, cb)
+async function throwOrReject(a_test, operation, fn, obj, args, message)
 {
     if (operation.idlType.generic !== "Promise") {
         assert_throws_js(globalOf(fn).TypeError, function() {
             fn.apply(obj, args);
         }, message);
-        cb();
     } else {
+        var promise;
         try {
-            promise_rejects_js(a_test, TypeError, fn.apply(obj, args), message).then(cb, cb);
-        } catch (e){
-            a_test.step(function() {
-                assert_unreached("Throws \"" + e + "\" instead of rejecting promise");
-                cb();
-            });
+            promise = fn.apply(obj, args);
+        } catch (e) {
+            assert_unreached("Throws \"" + e + "\" instead of rejecting promise");
+            return;
         }
+        await promise_rejects_js(a_test, TypeError, promise, message);
     }
-}
-
-function awaitNCallbacks(n, cb, ctx)
-{
-    var counter = 0;
-    return function() {
-        counter++;
-        if (counter >= n) {
-            cb();
-        }
-    };
 }
 
 var fround =
@@ -2323,11 +2311,8 @@ IdlInterface.prototype.test_member_attribute = function(member)
     if (!shouldRunSubTest(this.name)) {
         return;
     }
-    var a_test = subsetTestByKey(this.name, async_test, this.name + " interface: attribute " + member.name);
-    a_test.step(function()
-    {
+    subsetTestByKey(this.name, promise_test, async function(a_test) {
         if (this.is_callback() && !this.has_constants()) {
-            a_test.done()
             return;
         }
 
@@ -2339,7 +2324,6 @@ IdlInterface.prototype.test_member_attribute = function(member)
             assert_own_property(this.get_interface_object(), member.name,
                 "The interface object must have a property " +
                 format_value(member.name));
-            a_test.done();
             return;
         }
 
@@ -2373,9 +2357,7 @@ IdlInterface.prototype.test_member_attribute = function(member)
                               "Gets on a global should not require an explicit this");
             }
 
-            // do_interface_attribute_asserts must be the last thing we do,
-            // since it will call done() on a_test.
-            this.do_interface_attribute_asserts(self, member, a_test);
+            await this.do_interface_attribute_asserts(self, member, a_test);
         } else {
             assert_true(member.name in this.get_interface_object().prototype,
                 "The prototype object must have a property " +
@@ -2387,28 +2369,18 @@ IdlInterface.prototype.test_member_attribute = function(member)
                     assert_throws_js(TypeError, function() {
                         this.get_interface_object().prototype[member.name];
                     }.bind(this), "getting property on prototype object must throw TypeError");
-                    // do_interface_attribute_asserts must be the last thing we
-                    // do, since it will call done() on a_test.
-                    this.do_interface_attribute_asserts(this.get_interface_object().prototype, member, a_test);
                 } else {
-                    promise_rejects_js(a_test, TypeError,
-                                    this.get_interface_object().prototype[member.name])
-                        .then(a_test.step_func(function() {
-                            // do_interface_attribute_asserts must be the last
-                            // thing we do, since it will call done() on a_test.
-                            this.do_interface_attribute_asserts(this.get_interface_object().prototype,
-                                                                member, a_test);
-                        }.bind(this)));
+                    await promise_rejects_js(a_test, TypeError,
+                                             this.get_interface_object().prototype[member.name]);
                 }
             } else {
                 assert_equals(this.get_interface_object().prototype[member.name], undefined,
                               "getting property on prototype object must return undefined");
-              // do_interface_attribute_asserts must be the last thing we do,
-              // since it will call done() on a_test.
-              this.do_interface_attribute_asserts(this.get_interface_object().prototype, member, a_test);
             }
+
+            await this.do_interface_attribute_asserts(this.get_interface_object().prototype, member, a_test);
         }
-    }.bind(this));
+    }.bind(this), this.name + " interface: attribute " + member.name);
 };
 
 IdlInterface.prototype.test_member_operation = function(member)
@@ -2416,14 +2388,11 @@ IdlInterface.prototype.test_member_operation = function(member)
     if (!shouldRunSubTest(this.name)) {
         return;
     }
-    var a_test = subsetTestByKey(this.name, async_test, this.name + " interface: operation " + member);
-    a_test.step(function()
-    {
+    subsetTestByKey(this.name, promise_test, async function(a_test) {
         // This function tests WebIDL as of 2015-12-29.
         // https://heycam.github.io/webidl/#es-operations
 
         if (this.is_callback() && !this.has_constants()) {
-            a_test.done();
             return;
         }
 
@@ -2432,7 +2401,6 @@ IdlInterface.prototype.test_member_operation = function(member)
         if (this.is_callback()) {
             assert_false("prototype" in this.get_interface_object(),
                          this.name + ' should not have a "prototype" property');
-            a_test.done();
             return;
         }
 
@@ -2469,8 +2437,8 @@ IdlInterface.prototype.test_member_operation = function(member)
             memberHolderObject = this.get_interface_object().prototype;
         }
         this.do_member_unscopable_asserts(member);
-        this.do_member_operation_asserts(memberHolderObject, member, a_test);
-    }.bind(this));
+        await this.do_member_operation_asserts(memberHolderObject, member, a_test);
+    }.bind(this), this.name + " interface: operation " + member);
 };
 
 IdlInterface.prototype.do_member_unscopable_asserts = function(member)
@@ -2500,9 +2468,8 @@ IdlInterface.prototype.do_member_unscopable_asserts = function(member)
                   this.name + '.prototype[Symbol.unscopables].' + prop + ' must have the value `true`');
 };
 
-IdlInterface.prototype.do_member_operation_asserts = function(memberHolderObject, member, a_test)
+IdlInterface.prototype.do_member_operation_asserts = async function(memberHolderObject, member, a_test)
 {
-    var done = a_test.done.bind(a_test);
     var operationUnforgeable = member.isUnforgeable;
     var desc = Object.getOwnPropertyDescriptor(memberHolderObject, member.name);
     // "The property has attributes { [[Writable]]: B,
@@ -2544,15 +2511,11 @@ IdlInterface.prototype.do_member_operation_asserts = function(memberHolderObject
     // have to skip this test for anything that on the proto chain of "self",
     // since that does in fact have implicit-this behavior.
     if (member.special !== "static") {
-        var cb;
         if (!this.is_global() &&
             memberHolderObject[member.name] != self[member.name])
         {
-            cb = awaitNCallbacks(2, done);
-            throwOrReject(a_test, member, memberHolderObject[member.name], null, args,
-                          "calling operation with this = null didn't throw TypeError", cb);
-        } else {
-            cb = awaitNCallbacks(1, done);
+            await throwOrReject(a_test, member, memberHolderObject[member.name], null, args,
+                                "calling operation with this = null didn't throw TypeError");
         }
 
         // ". . . If O is not null and is also not a platform object
@@ -2560,10 +2523,8 @@ IdlInterface.prototype.do_member_operation_asserts = function(memberHolderObject
         //
         // TODO: Test a platform object that implements some other
         // interface.  (Have to be sure to get inheritance right.)
-        throwOrReject(a_test, member, memberHolderObject[member.name], {}, args,
-                      "calling operation with this = {} didn't throw TypeError", cb);
-    } else {
-        done();
+        await throwOrReject(a_test, member, memberHolderObject[member.name], {}, args,
+                            "calling operation with this = {} didn't throw TypeError");
     }
 }
 
@@ -2726,7 +2687,7 @@ IdlInterface.prototype.test_members = function()
 {
     for (var i = 0; i < this.members.length; i++)
     {
-        var member = this.members[i];
+        const member = this.members[i];
         if (member.untested) {
             continue;
         }
@@ -2905,7 +2866,7 @@ IdlInterface.prototype.test_interface_of = function(desc, obj, exception, expect
 
     for (var i = 0; i < this.members.length; i++)
     {
-        var member = this.members[i];
+        const member = this.members[i];
         if (member.untested) {
             continue;
         }
@@ -2918,27 +2879,23 @@ IdlInterface.prototype.test_interface_of = function(desc, obj, exception, expect
         }
         if (member.type == "attribute" && member.isUnforgeable)
         {
-            var a_test = subsetTestByKey(this.name, async_test, this.name + " interface: " + desc + ' must have own property "' + member.name + '"');
-            a_test.step(function() {
+            subsetTestByKey(this.name, promise_test, async function(a_test) {
                 assert_equals(exception, null, "Unexpected exception when evaluating object");
                 assert_equals(typeof obj, expected_typeof, "wrong typeof object");
-                // Call do_interface_attribute_asserts last, since it will call a_test.done()
-                this.do_interface_attribute_asserts(obj, member, a_test);
-            }.bind(this));
+                await this.do_interface_attribute_asserts(obj, member, a_test);
+            }.bind(this), this.name + " interface: " + desc + ' must have own property "' + member.name + '"');
         }
         else if (member.type == "operation" &&
                  member.name &&
                  member.isUnforgeable)
         {
-            var a_test = subsetTestByKey(this.name, async_test, this.name + " interface: " + desc + ' must have own property "' + member.name + '"');
-            a_test.step(function()
-            {
+            var a_test = subsetTestByKey(this.name, promise_test, async function(a_test) {
                 assert_equals(exception, null, "Unexpected exception when evaluating object");
                 assert_equals(typeof obj, expected_typeof, "wrong typeof object");
                 assert_own_property(obj, member.name,
                                     "Doesn't have the unforgeable operation property");
-                this.do_member_operation_asserts(obj, member, a_test);
-            }.bind(this));
+                await this.do_member_operation_asserts(obj, member, a_test);
+            }.bind(this), this.name + " interface: " + desc + ' must have own property "' + member.name + '"');
         }
         else if ((member.type == "const"
         || member.type == "attribute"
@@ -3002,9 +2959,7 @@ IdlInterface.prototype.test_interface_of = function(desc, obj, exception, expect
             var description =
                 this.name + " interface: calling " + member + " on " + desc +
                 " with too few arguments must throw TypeError";
-            var a_test = subsetTestByKey(this.name, async_test, description);
-            a_test.step(function()
-            {
+            subsetTestByKey(this.name, promise_test, async function(a_test) {
                 assert_equals(exception, null, "Unexpected exception when evaluating object");
                 assert_equals(typeof obj, expected_typeof, "wrong typeof object");
                 var fn;
@@ -3026,16 +2981,12 @@ IdlInterface.prototype.test_interface_of = function(desc, obj, exception, expect
                     return m.type == "operation" && m.name == member.name;
                 }));
                 var args = [];
-                var cb = awaitNCallbacks(minLength, a_test.done.bind(a_test));
                 for (var i = 0; i < minLength; i++) {
-                    throwOrReject(a_test, member, fn, obj, args, "Called with " + i + " arguments", cb);
+                    await throwOrReject(a_test, member, fn, obj, args, "Called with " + i + " arguments");
 
                     args.push(create_suitable_object(member.arguments[i].idlType));
                 }
-                if (minLength === 0) {
-                    cb();
-                }
-            }.bind(this));
+            }.bind(this), description);
         }
 
         if (member.is_to_json_regular_operation()) {
@@ -3061,7 +3012,7 @@ IdlInterface.prototype.has_stringifier = function()
     return false;
 };
 
-IdlInterface.prototype.do_interface_attribute_asserts = function(obj, member, a_test)
+IdlInterface.prototype.do_interface_attribute_asserts = async function(obj, member, a_test)
 {
     // This function tests WebIDL as of 2015-01-27.
     // TODO: Consider [Exposed].
@@ -3069,8 +3020,6 @@ IdlInterface.prototype.do_interface_attribute_asserts = function(obj, member, a_
     // This is called by test_member_attribute() with the prototype as obj if
     // it is not a global, and the global otherwise, and by test_interface_of()
     // with the object as obj.
-
-    var pendingPromises = [];
 
     // "For each exposed attribute of the interface, whether it was declared on
     // the interface itself or one of its consequential interfaces, there MUST
@@ -3116,9 +3065,9 @@ IdlInterface.prototype.do_interface_attribute_asserts = function(obj, member, a_
                     desc.get.call({});
                 }.bind(this), "calling getter on wrong object type must throw TypeError");
             } else {
-                pendingPromises.push(
-                    promise_rejects_js(a_test, TypeError, desc.get.call({}),
-                                    "calling getter on wrong object type must reject the return promise with TypeError"));
+                await promise_rejects_js(
+                    a_test, TypeError, desc.get.call({}),
+                    "calling getter on wrong object type must reject the return promise with TypeError");
             }
         } else {
             assert_equals(desc.get.call({}), undefined,
@@ -3181,8 +3130,6 @@ IdlInterface.prototype.do_interface_attribute_asserts = function(obj, member, a_
         assert_equals(desc.set.name, "set " + member.name,
             "The attribute setter must have the name 'set " + member.name + "'");
     }
-
-    Promise.all(pendingPromises).then(a_test.done.bind(a_test));
 }
 
 /// IdlInterfaceMember ///
@@ -3355,7 +3302,7 @@ function IdlNamespace(obj)
 
 IdlNamespace.prototype = Object.create(IdlObject.prototype);
 
-IdlNamespace.prototype.do_member_operation_asserts = function (memberHolderObject, member, a_test)
+IdlNamespace.prototype.do_member_operation_asserts = async function (memberHolderObject, member, a_test)
 {
     var desc = Object.getOwnPropertyDescriptor(memberHolderObject, member.name);
 
@@ -3382,7 +3329,6 @@ IdlNamespace.prototype.do_member_operation_asserts = function (memberHolderObjec
             return m.type == "operation" && m.name == member.name;
         })),
         "operation has wrong .length");
-    a_test.done();
 }
 
 IdlNamespace.prototype.test_member_operation = function(member)
@@ -3390,18 +3336,14 @@ IdlNamespace.prototype.test_member_operation = function(member)
     if (!shouldRunSubTest(this.name)) {
         return;
     }
-    var a_test = subsetTestByKey(
-        this.name,
-        async_test,
-        this.name + ' namespace: operation ' + member);
-    a_test.step(function() {
+    subsetTestByKey(this.name, promise_test, async function(a_test) {
         assert_own_property(
             self[this.name],
             member.name,
             'namespace object missing operation ' + format_value(member.name));
 
-        this.do_member_operation_asserts(self[this.name], member, a_test);
-    }.bind(this));
+        await this.do_member_operation_asserts(self[this.name], member, a_test);
+    }.bind(this), this.name + ' namespace: operation ' + member);
 };
 
 IdlNamespace.prototype.test_member_attribute = function (member)
@@ -3409,12 +3351,7 @@ IdlNamespace.prototype.test_member_attribute = function (member)
     if (!shouldRunSubTest(this.name)) {
         return;
     }
-    var a_test = subsetTestByKey(
-        this.name,
-        async_test,
-        this.name + ' namespace: attribute ' + member.name);
-    a_test.step(function()
-    {
+    subsetTestByKey(this.name, promise_test, async function(a_test) {
         assert_own_property(
             self[this.name],
             member.name,
@@ -3422,8 +3359,7 @@ IdlNamespace.prototype.test_member_attribute = function (member)
 
         var desc = Object.getOwnPropertyDescriptor(self[this.name], member.name);
         assert_equals(desc.set, undefined, "setter must be undefined for namespace members");
-        a_test.done();
-    }.bind(this));
+    }.bind(this), this.name + ' namespace: attribute ' + member.name);
 };
 
 IdlNamespace.prototype.test = function ()
