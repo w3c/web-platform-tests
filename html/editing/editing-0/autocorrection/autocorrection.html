@@ -8,19 +8,19 @@
 
 test(function() {
     assert_true('autocorrect' in document.createElement('input'));
-}, "Test that the autocorrect is available on HTMLInputElement.")
+}, "Test that the autocorrect attribute is available on HTMLInputElement.")
 
 test(function() {
     assert_true('autocorrect' in document.createElement('textarea'));
-}, "Test that the autocorrect is available on HTMLTextAreaElement.")
+}, "Test that the autocorrect attribute is available on HTMLTextAreaElement.")
 
 test(function() {
     assert_true('autocorrect' in document.createElement('div'));
-}, "Test that the autocorrect is available on div.")
+}, "Test that the autocorrect attribute is available on div.")
 
 test(function() {
     assert_true('autocorrect' in document.createElement('form'));
-}, "Test that the autocorrect is available on form.")
+}, "Test that the autocorrect attribute is available on form.")
 
 test(function() {
   var elements = [ document.createElement('input'),
@@ -45,7 +45,7 @@ test(function() {
     assert_false(e.autocorrect);
     assert_equals(e.getAttribute('autocorrect'), 'off');
   });
-}, "Test setting the autocorrect boolean attribute.");
+}, "Test setting the autocorrect IDL attribute.");
 
 test(function() {
   var elements = [ document.createElement('input'),
