@@ -361,6 +361,7 @@ class WebDriverRun(TimedRunner):
         except (client.TimeoutException, client.ScriptTimeoutException):
             self.result = False, ("EXTERNAL-TIMEOUT", None)
         except (socket.timeout, client.UnknownErrorException):
+            self.logger.error("Got either socket.timeout or client.UnknownErrorException")
             self.result = False, ("CRASH", None)
         except Exception as e:
             if (isinstance(e, client.WebDriverException) and
@@ -465,6 +466,8 @@ class WebDriverTestharnessExecutor(TestharnessExecutor):
 
             done, rv = handler(result)
             if done:
+                self.logger.info('Done')
+                self.logger.info(rv)
                 break
 
         # Attempt to cleanup any leftover windows, if allowed. This is
