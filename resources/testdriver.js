@@ -219,7 +219,7 @@
               state,
               oneRealm: one_realm,
             };
-            return window.test_driver_internal.set_permission(permission_params);
+            return window.test_driver_internal.post('permissions', permission_params);
         },
 
         /**
