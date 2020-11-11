@@ -107,7 +107,7 @@ def test_abort_by_user_prompt_twice(session, dialog_type):
                                     u"\U0010FFFF"])
 def test_return_awkward_string(session, string):
     # lone surrogate from browser to client
-    response = execute_script(session, u"return String.fromCodePoint(%s)" % u", ".join(ord(c) for c in string))
+    response = execute_script(session, u"return String.fromCodePoint(%s)" % u", ".join(hex(ord(c)) for c in string))
     assert_success(response, string)
 
 
