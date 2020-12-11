@@ -84,12 +84,6 @@ var values = {
             shadow: ['rgba(0,0,0,0.1) 5px 6px 7px', 'rgba(10,10,10,0.9) 5px 6px 7px']
         };
     },
-    'visibility': function() {
-        // http://www.w3.org/TR/CSS2/visufx.html#visibility
-        return {
-            keyword: ['visible', 'hidden', {discrete: true}]
-        };
-    },
     'auto': function(property) {
         var types = properties[property] || unspecified_properties[property];
         var val = values[types[0]](property);
@@ -147,19 +141,6 @@ var values = {
     'transform': function() {
         return {
             rotate: ['rotate(10deg)', 'rotate(20deg)']
-        };
-    },
-    'position': function() {
-        return {
-            'static to absolute': ['static', 'absolute', {discrete: true}],
-            'relative to absolute': ['relative', 'absolute', {discrete: true}],
-            'absolute to fixed': ['absolute', 'fixed', {discrete: true}]
-        };
-    },
-    'display': function() {
-        return {
-            'static to absolute': ['none', 'block', {discrete: true}],
-            'block to inline-block': ['block', 'inline-block', {discrete: true}]
         };
     }
 };
@@ -224,7 +205,6 @@ var properties = {
 
     'vertical-align': ['length', 'percentage'],
     'opacity': ['number[0,1]'],
-    'visibility': ['visibility'],
     'z-index': ['integer']
 };
 
@@ -294,9 +274,7 @@ var unspecified_properties = {
     'outline-radius-topleft': ['length', 'percentage'],
     'outline-radius-topright': ['length', 'percentage'],
     'outline-radius-bottomright': ['length', 'percentage'],
-    'outline-radius-bottomleft': ['length', 'percentage'],
-    'display': ['display'],
-    'position': ['position']
+    'outline-radius-bottomleft': ['length', 'percentage']
 };
 
 /*
