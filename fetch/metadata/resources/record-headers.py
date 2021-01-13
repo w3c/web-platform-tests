@@ -4,6 +4,30 @@ import hashlib
 import time
 import json
 
+
+def bytes_to_strings(d):
+  # Recursively convert bytes to strings in `d`.
+  result = {}
+  if not isinstance(d, dict):
+    if isinstance(d, (tuple,list,set)):
+      v = [bytes_to_strings(x) for x in d]
+      return v
+    else:
+      if isinstance(d, bytes):
+        d = d.decode()
+      return d
+
+  for k,v in d.items():
+    if isinstance(k, bytes):
+      k = k.decode()
+    if isinstance(v, dict):
+      v = bytes_to_strings(v)
+    elif isinstance(v, (tuple,list,set)):
+      v = [bytes_to_strings(x) for x in v]
+    result[k] = v
+  return result
+
+
 def main(request, response):
   # This condition avoids false positives from CORS preflight checks, where the
   # request under test may be followed immediately by a request to the same URL
@@ -31,7 +55,7 @@ def main(request, response):
   ## Record incoming fetch metadata header value
   else:
     try:
-      request.server.stash.put(testId, json.dumps(request.headers))
+      request.server.stash.put(testId, json.dumps(bytes_to_strings(request.headers)))
     except KeyError:
       ## The header is already recorded or it doesn't exist
       pass
