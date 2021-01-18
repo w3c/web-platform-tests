@@ -7,7 +7,6 @@ import json
 
 def bytes_to_strings(d):
   # Recursively convert bytes to strings in `d`.
-  result = {}
   if not isinstance(d, dict):
     if isinstance(d, (tuple,list,set)):
       v = [bytes_to_strings(x) for x in d]
@@ -17,6 +16,7 @@ def bytes_to_strings(d):
         d = d.decode()
       return d
 
+  result = {}
   for k,v in d.items():
     if isinstance(k, bytes):
       k = k.decode()
@@ -24,6 +24,8 @@ def bytes_to_strings(d):
       v = bytes_to_strings(v)
     elif isinstance(v, (tuple,list,set)):
       v = [bytes_to_strings(x) for x in v]
+    elif isinstance(v, bytes):
+      v = v.decode()
     result[k] = v
   return result
 
