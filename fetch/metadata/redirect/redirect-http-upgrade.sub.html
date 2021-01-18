@@ -7,8 +7,8 @@
 <script src=/common/security-features/resources/common.sub.js></script>
 <script src=/common/utils.js></script>
 <body>
-    <script>
-  let nonce = "{{$id}}";
+<script>
+  let nonce = token();
   let expected = { "site": "cross-site", "user": "", "mode": "cors", "dest": "font" };
 
   // Validate various scenarios handle a request that redirects from http => https correctly and add the proper Sec- headers.

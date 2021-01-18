@@ -8,7 +8,7 @@
 <script src=/common/utils.js></script>
 <body>
 <script>
-  let nonce = "{{$id}}";
+  let nonce = token();
   let expected = {"site": "cross-site", "user": "", "mode": "cors", "dest": "font"};
 
   // Validate various scenarios handle a request that redirects from https => http => https
