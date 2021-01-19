@@ -6,7 +6,10 @@ def main(request, response):
     """
     headers = [
         (b'Content-Type', b'text/html'),
-        (b'Link', b'<{}>; rel={}'.format(request.GET.first(b'location'), request.GET.first(b'rel')))
+        (
+          b'Link',
+          b'<' + request.GET.first(b'location') + b'>; rel=' + request.GET.first(b'rel')
+        )
     ]
     return (200, headers, b'')
 

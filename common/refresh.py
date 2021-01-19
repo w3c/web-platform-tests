@@ -6,6 +6,6 @@ def main(request, response):
     """
     headers = [
         (b'Content-Type', b'text/html'),
-        (b'Refresh', b'0; URL={}'.format(request.GET.first(b'location')))
+        (b'Refresh', b'0; URL=' + request.GET.first(b'location'))
     ]
     return (200, headers, b'')
