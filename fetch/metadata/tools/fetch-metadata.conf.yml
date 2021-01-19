@@ -388,8 +388,8 @@ cases:
       window-history.sub.html: []
       worker-dedicated-constructor.sub.html: []
       worker-dedicated-importscripts.sub.html: []
-
-      appcache-manifest.sub.https.html: [{}]
+      # Avoid duplicate subtest for 'sec-fetch-site - HTTPS downgrade-upgrade'
+      appcache-manifest.sub.https.html: []
       css-images.sub.html:
         - filename_flags: [tentative]
       element-a.sub.html: [{}]
