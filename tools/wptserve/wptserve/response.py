@@ -96,6 +96,15 @@ class Response(object):
         else:
             self._status = (int(value), None)
 
+    def can_iter_content(self):
+        try:
+            iter(self.content)
+            return True
+        except TypeError:
+            if hasattr(self.content, "read"):
+                return True
+            return False
+
     def set_cookie(self, name, value, path="/", domain=None, max_age=None,
                    expires=None, secure=False, httponly=False, comment=None):
         """Set a cookie to be sent with a Set-Cookie header in the
