@@ -1,0 +1,30 @@
+<!doctype html>
+<meta charset=utf-8>
+<title>Node.appendChild: inserting a script and a style where the script modifies the style</title>
+<script src=/resources/testharness.js></script>
+<script src=/resources/testharnessreport.js></script>
+<div id="log"></div>
+<script>
+const happened = [];
+const style = document.createElement("style");
+let styleSheet = null;
+test(() => {
+style.appendChild(new Text("body {}"));
+  const script = document.createElement("script");
+  script.textContent = `
+    happened.push(style.sheet === null);
+    style.appendChild(new Text("body {}"));
+    happened.push(style.sheet.cssRules.length);
+    styleSheet = style.sheet;
+`;
+
+  const div = document.createElement("div");
+  div.appendChild(script);
+  div.appendChild(style);
+
+  assert_array_equals(happened, []);
+  document.body.appendChild(div);
+  assert_array_equals(happened, [true, 2]);
+  assert_not_equals(style.sheet, styleSheet, "style sheet was created only once");
+});
+</script>

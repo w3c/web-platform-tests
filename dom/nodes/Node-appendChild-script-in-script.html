@@ -1,0 +1,27 @@
+<!doctype html>
+<meta charset=utf-8>
+<title>Node.appendChild: inserting a script and some code in an empty script</title>
+<script src=/resources/testharness.js></script>
+<script src=/resources/testharnessreport.js></script>
+<div id="log"></div>
+<script id="s1"></script>
+<script>
+const happened = [];
+test(() => {
+  const s1 = document.getElementById("s1");
+  const s2 = document.createElement("script");
+  s2.textContent = `
+    happened.push("s2");
+    s1.appendChild(new Text("happened.push('s1ran');"));
+    happened.push("s2ran");
+`;
+
+  const df = document.createDocumentFragment();
+  df.appendChild(new Text(`happened.push("s1");`));
+  df.appendChild(s2);
+
+  assert_array_equals(happened, []);
+  s1.appendChild(df);
+  assert_array_equals(happened, ["s2", "s2ran", "s1", "s1ran"]);
+});
+</script>

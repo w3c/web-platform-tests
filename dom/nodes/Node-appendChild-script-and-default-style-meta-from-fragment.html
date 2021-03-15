@@ -1,0 +1,32 @@
+<!doctype html>
+<meta charset=utf-8>
+<title>Node.appendChild: inserting script and default-style meta from a fragment</title>
+<script src=/resources/testharness.js></script>
+<script src=/resources/testharnessreport.js></script>
+<link rel="alternate stylesheet" title="alternative" href="data:text/css,%23div{display:none}">
+<div id="log"></div>
+<div id="div">hello</div>
+<script>
+let scriptRan = false;
+let computedStyle = null;
+test(() => {
+  const div = document.getElementById("div");
+  const meta = document.createElement("meta");
+  meta.httpEquiv = "default-style";
+  meta.content = "alternative";
+  const script = document.createElement("script");
+  script.textContent = `
+    computedStyle = getComputedStyle(div).display;
+    scriptRan = true;
+`;
+  const df = document.createDocumentFragment();
+  df.appendChild(script);
+  df.appendChild(meta);
+  assert_equals(getComputedStyle(div).display, "block", "div is not a block");
+  assert_false(scriptRan, "script ran");
+  document.head.appendChild(df);
+  assert_true(scriptRan, "script has not run");
+  assert_equals(computedStyle, "none", "div is still visible");
+  assert_equals(getComputedStyle(div).display, "none", "div is still visible after insertion");
+});
+</script>
