@@ -995,8 +995,7 @@ class MarionetteRefTestExecutor(RefTestExecutor):
             assertion_count = self.protocol.asserts.get()
             if "extra" not in result:
                 result["extra"] = {}
-            if assertion_count is not None:
-                result["extra"]["assertion_count"] = assertion_count
+            result["extra"]["assertion_count"] = assertion_count
 
         if self.debug_test and result["status"] in ["PASS", "FAIL", "ERROR"] and "extra" in result:
             self.protocol.base.set_window(self.protocol.base.window_handles()[0])
