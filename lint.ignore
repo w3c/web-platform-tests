@@ -810,3 +810,6 @@ DUPLICATE-BASENAME-PATH: dom/nodes/ParentNode-querySelector-All-content.html
 DUPLICATE-BASENAME-PATH: dom/nodes/ParentNode-querySelector-All-content.xht
 DUPLICATE-BASENAME-PATH: svg/struct/reftests/reference/green-100x100.html
 DUPLICATE-BASENAME-PATH: svg/struct/reftests/reference/green-100x100.svg
+
+# Python 3-only files are not parsable as Python 2
+PARSE-FAILED: html/syntax/speculative-parsing/tools/generate.py
