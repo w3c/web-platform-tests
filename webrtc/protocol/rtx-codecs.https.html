@@ -1,0 +1,143 @@
+<!doctype html>
+<meta charset=utf-8>
+<title>RTX codec integrity checks</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="../RTCPeerConnection-helper.js"></script>
+<script>
+'use strict';
+
+// Tests for conformance to rules for RTX codecs.
+// Basic rule: Offers and answers must contain RTX codecs, and the
+// RTX codecs must have an a=fmtp line that points to a non-RTX codec.
+
+function verifyRtxReferences(description) {
+  let video_section_found = false;
+  for (let section of description.sdp.split(/\r\nm=/)) {
+    if (section.search('video') != 0) {
+      continue;
+    }
+    video_section_found = true;
+    // RTPMAP lines have the format a=rtpmap:<pt> <codec>/<clock rate>
+    let rtpmap_regex = /\r\na=rtpmap:(\d+) (\S+)\/\d+/g;
+    let match = rtpmap_regex.exec(section);
+    let payload_type_map = new Map();
+    while (match) {
+      payload_type_map.set(match[1], match[2]);
+      match = rtpmap_regex.exec(section);
+    }
+    // Pick up a=fmtp lines of the form a=fmtp:<nn> apt=<nn>
+    let fmtp_map = new Map();
+    let fmtp_regex = /\r\na=fmtp:(\d+) apt=(\d+)\r?/g;
+    let fmtp_match = fmtp_regex.exec(section);
+    while (fmtp_match) {
+      fmtp_map.set(fmtp_match[1], fmtp_match[2]);
+      fmtp_match = fmtp_regex.exec(section);
+    }
+
+    for (let pt of payload_type_map.keys()) {
+      if (payload_type_map.get(pt) == 'rtx') {
+        assert_true(fmtp_map.has(pt), 'Has fmtp line for rtx codec');
+        assert_true(payload_type_map.has(fmtp_map.get(pt)),
+                   'rtx fmtp line points to existing payload type');
+        assert_false(payload_type_map.get(fmtp_map.get(pt)) === 'rtx');
+      }
+    }
+  }
+  assert_true(video_section_found);
+}
+
+promise_test(async t => {
+  const pc = new RTCPeerConnection();
+  const offer = await generateVideoReceiveOnlyOffer(pc);
+  verifyRtxReferences(offer);
+}, 'Initial offer should have sensible RTX mappings');
+
+async function negotiateAndReturnAnswer() {
+  const pc1 = new RTCPeerConnection();
+  const pc2 = new RTCPeerConnection();
+  let [track, streams] = await getTrackFromUserMedia('video');
+  const sender = pc1.addTrack(track);
+  await doSignalingHandshake(pc1, pc2);
+  return pc2.localDescription;
+}
+
+promise_test(async t => {
+  const answer = await negotiateAndReturnAnswer();
+  verifyRtxReferences(answer);
+}, 'Self-negotiated answer should have sensible RTX parameters');
+
+promise_test(async t => {
+  const sampleOffer = `v=0
+o=- 1878890426675213188 2 IN IP4 127.0.0.1
+s=-
+t=0 0
+a=group:BUNDLE video
+a=msid-semantic: WMS
+m=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99
+c=IN IP4 0.0.0.0
+a=rtcp:9 IN IP4 0.0.0.0
+a=ice-ufrag:RGPK
+a=ice-pwd:rAyHEAKC7ckxQgWaRZXukz+Z
+a=ice-options:trickle
+a=fingerprint:sha-256 8C:29:0A:8F:11:06:BF:1C:58:B3:CA:E6:F1:F1:DC:99:4C:6C:89:E9:FF:BC:D4:38:11:18:1F:40:19:C8:49:37
+a=setup:actpass
+a=mid:video
+a=recvonly
+a=rtcp-mux
+a=rtpmap:97 rtx/90000
+a=fmtp:97 apt=98
+a=rtpmap:98 VP8/90000
+a=rtcp-fb:98 ccm fir
+a=rtcp-fb:98 nack
+a=rtcp-fb:98 nack pli
+a=rtcp-fb:98 goog-remb
+a=rtcp-fb:98 transport-cc
+`;
+  const pc = new RTCPeerConnection();
+  let [track, streams] = await getTrackFromUserMedia('video');
+  const sender = pc.addTrack(track);
+  await pc.setRemoteDescription({type: 'offer', sdp: sampleOffer});
+  const answer = await pc.createAnswer();
+  verifyRtxReferences(answer);
+}, 'A remote offer generates sensible RTX references in answer');
+
+promise_test(async t => {
+  const sampleOffer = `v=0
+o=- 1878890426675213188 2 IN IP4 127.0.0.1
+s=-
+t=0 0
+a=group:BUNDLE video
+a=msid-semantic: WMS
+m=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99
+c=IN IP4 0.0.0.0
+a=rtcp:9 IN IP4 0.0.0.0
+a=ice-ufrag:RGPK
+a=ice-pwd:rAyHEAKC7ckxQgWaRZXukz+Z
+a=ice-options:trickle
+a=fingerprint:sha-256 8C:29:0A:8F:11:06:BF:1C:58:B3:CA:E6:F1:F1:DC:99:4C:6C:89:E9:FF:BC:D4:38:11:18:1F:40:19:C8:49:37
+a=setup:actpass
+a=mid:video
+a=recvonly
+a=rtcp-mux
+a=rtpmap:96 VP8/90000
+a=rtpmap:97 rtx/90000
+a=fmtp:97 apt=98
+a=rtpmap:98 VP8/90000
+a=rtcp-fb:98 ccm fir
+a=rtcp-fb:98 nack
+a=rtcp-fb:98 nack pli
+a=rtcp-fb:98 goog-remb
+a=rtcp-fb:98 transport-cc
+a=rtpmap:99 rtx/90000
+a=fmtp:99 apt=96
+`;
+  const pc = new RTCPeerConnection();
+  let [track, streams] = await getTrackFromUserMedia('video');
+  const sender = pc.addTrack(track);
+  await pc.setRemoteDescription({type: 'offer', sdp: sampleOffer});
+  const answer = await pc.createAnswer();
+  verifyRtxReferences(answer);
+}, 'A remote offer with duplicate codecs generates sensible RTX references in answer');
+
+</script>
