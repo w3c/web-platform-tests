@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<title>Dynamic imports don't delay the load event</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script>
+// According to the current spec, dynamic imports don't seem to
+// #delay-the-load-event. Therefore, Window load event would be fired
+// just after the dynamic import() below starts.
+window.loaded = [];
+window.addEventListener('load', () => loaded.push('Window load event'));
+promise_test(t => {
+  loaded.push('import start');
+  t.step_timeout(() => loaded.push('loading'), 1000);
+  return import("../resources/slow-module.js?pipe=trickle(d2)")
+    .then(() => {
+        assert_array_equals(
+            loaded,
+            ['import start', 'Window load event', 'loading', 'slow'],
+            "Window load event shouldn't be delayed by dynamic imports");
+      });
+}, "Dynamic imports don't delay the load event.");
+</script>
