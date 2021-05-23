@@ -1,0 +1,3 @@
+Report-To: { "group": "csp-endpoint", "max_age": 10886400, "endpoints": [ { "url": "https://{{domains[www]}}:{{ports[https][0]}}/reporting/resources/report.py?reportID=b6b2fe5b-b9b8-58f5-a4fb-d4cef5a743a6"}]}
+Reporting-Endpoints: csp-endpoint="https://{{domains[www]}}:{{ports[https][0]}}/reporting/resources/report.py?reportID=3410c407-7385-5cab-8360-b7bde1b69729"
+Content-Security-Policy: script-src 'self' 'unsafe-inline'; img-src 'none'; report-to csp-endpoint

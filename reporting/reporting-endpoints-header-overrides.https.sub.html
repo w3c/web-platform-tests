@@ -1,0 +1,36 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Test that when both Reporting-Endpoints and Report-To headers are present, Reporting-Endpoints takes precedence</title>
+  <script src='/resources/testharness.js'></script>
+  <script src='/resources/testharnessreport.js'></script>
+  <script src='resources/report-helper.js'></script>
+</head>
+<body>
+  <script>
+    const base_url = `${location.protocol}//${location.host}`;
+    const endpoint = `${base_url}/reporting/resources/report.py`;
+    const report_to_id = 'b6b2fe5b-b9b8-58f5-a4fb-d4cef5a743a6';
+    const reporting_endpoints_id = '3410c407-7385-5cab-8360-b7bde1b69729';
+
+    promise_test(async t => {
+
+      // Trigger a CSP error.
+      await new Promise(resolve => {
+        const img = document.createElement('img');
+        img.src = "/reporting/resources/fail.png";
+        img.addEventListener('error', resolve);
+        document.body.appendChild(img);
+      });
+
+      // Wait for report to be received. Check both endpoints.
+      await wait(3000);
+      const report_to_reports = await pollReports(endpoint, report_to_id);
+      const reporting_endpoints_reports = await pollReports(endpoint, reporting_endpoints_id);
+      assert_equals(report_to_reports.length, 0);
+      assert_equals(reporting_endpoints_reports.length, 1);
+    }, "Reporting-Endpoints header overrides Report-To.");
+  </script>
+</body>
+</html>
+
