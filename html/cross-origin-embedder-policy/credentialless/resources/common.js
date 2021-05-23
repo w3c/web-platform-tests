@@ -6,7 +6,7 @@ const executor_js_path = directory + '/resources/executor.js?pipe=';
 const coep_none =
     '|header(Cross-Origin-Embedder-Policy,none)';
 const coep_credentialless =
-    '|header(Cross-Origin-Embedder-Policy,credentialless)';
+    '|header(Cross-Origin-Embedder-Policy,cors-or-credentialless)';
 const coep_require_corp =
     '|header(Cross-Origin-Embedder-Policy,require-corp)';
 
