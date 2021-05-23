@@ -1,10 +1,14 @@
-<!DOCTYPE html>
+<?xml version="1.0" encoding="utf-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
 <title>Script @type and @language: JavaScript types</title>
-<link rel="author" title="Ms2ger" href="mailto:ms2ger@gmail.com">
-<link rel="help" href="https://html.spec.whatwg.org/multipage/#scriptingLanguages">
-<link rel="help" href="https://html.spec.whatwg.org/multipage/#prepare-a-script">
+<link rel="author" title="Ms2ger" href="mailto:ms2ger@gmail.com" />
+<link rel="help" href="https://html.spec.whatwg.org/multipage/#scriptingLanguages" />
+<link rel="help" href="https://html.spec.whatwg.org/multipage/#prepare-a-script" />
 <script src="/resources/testharness.js"></script>
 <script src="/resources/testharnessreport.js"></script>
+</head>
+<body>
 <div id="log"></div>
 <script src="resources/script-type-and-language-js.js"></script>
 
@@ -33,3 +37,6 @@
 <script>testParserInsertedIgnored('type=ecmascript');</script>
 <script type="jscript">ran = true;</script>
 <script>testParserInsertedIgnored('type=jscript');</script>
+
+</body>
+</html>
