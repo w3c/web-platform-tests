@@ -31,7 +31,7 @@ def get_route_builder_func(report):
             reports_enabled=report,
             tests=data["items"])
 
-        class WaveHandler(object):
+        class WaveHandler:
             def __call__(self, request, response):
                 wave_server.handle_request(request, response)
 

@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from typing import ClassVar, List, Type
 
 
-class Protocol(object):
+class Protocol:
     """Backend for a specific browser-control protocol.
 
     Each Protocol is composed of a set of ProtocolParts that implement
@@ -77,7 +77,7 @@ class Protocol(object):
             getattr(self, cls.name).teardown()
 
 
-class ProtocolPart(object):
+class ProtocolPart:
     """Base class  for all ProtocolParts.
 
     :param Protocol parent: The parent protocol"""

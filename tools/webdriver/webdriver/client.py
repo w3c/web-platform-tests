@@ -23,7 +23,7 @@ def command(func):
     return inner
 
 
-class Timeouts(object):
+class Timeouts:
 
     def __init__(self, session):
         self.session = session
@@ -69,7 +69,7 @@ class Timeouts(object):
             (name, self.script, self.page_load, self.implicit)
 
 
-class ActionSequence(object):
+class ActionSequence:
     """API for creating and performing action sequences.
 
     Each action method adds one or more actions to a queue. When perform()
@@ -263,7 +263,7 @@ class ActionSequence(object):
         return self
 
 
-class Actions(object):
+class Actions:
     def __init__(self, session):
         self.session = session
 
@@ -291,7 +291,7 @@ class Actions(object):
         return ActionSequence(self.session, *args, **kwargs)
 
 
-class Window(object):
+class Window:
     identifier = "window-fcc6-11e5-b4f8-330a88ab9d7f"
 
     def __init__(self, session):
@@ -362,7 +362,7 @@ class Window(object):
         return cls(uuid, session)
 
 
-class Frame(object):
+class Frame:
     identifier = "frame-075b-4da1-b6ba-e579c2d3230a"
 
     def __init__(self, session):
@@ -374,7 +374,7 @@ class Frame(object):
         return cls(uuid, session)
 
 
-class ShadowRoot(object):
+class ShadowRoot:
     identifier = "shadow-075b-4da1-b6ba-e579c2d3230a"
 
     def __init__(self, session, id):
@@ -394,7 +394,7 @@ class ShadowRoot(object):
         return cls(uuid, session)
 
     def send_shadow_command(self, method, uri, body=None):
-        url = "shadow/{}/{}".format(self.id, uri)
+        url = f"shadow/{self.id}/{uri}"
         return self.session.send_session_command(method, url, body)
 
     @command
@@ -410,7 +410,7 @@ class ShadowRoot(object):
         return self.send_shadow_command("POST", "elements", body)
 
 
-class Find(object):
+class Find:
     def __init__(self, session):
         self.session = session
 
@@ -426,7 +426,7 @@ class Find(object):
         return self.session.send_session_command("POST", route, body)
 
 
-class Cookies(object):
+class Cookies:
     def __init__(self, session):
         self.session = session
 
@@ -444,7 +444,7 @@ class Cookies(object):
         self.session.send_session_command("POST", "cookie/%s" % name, {})
 
 
-class UserPrompt(object):
+class UserPrompt:
     def __init__(self, session):
         self.session = session
 
@@ -468,7 +468,7 @@ class UserPrompt(object):
         self.session.send_session_command("POST", "alert/text", body=body)
 
 
-class Session(object):
+class Session:
     def __init__(self,
                  host,
                  port,
@@ -758,7 +758,7 @@ class Session(object):
     def screenshot(self):
         return self.send_session_command("GET", "screenshot")
 
-class Element(object):
+class Element:
     """
     Representation of a web element.
 

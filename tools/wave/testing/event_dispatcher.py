@@ -3,7 +3,7 @@ RESUME_EVENT = "resume"
 TEST_COMPLETED_EVENT = "test_completed"
 
 
-class EventDispatcher(object):
+class EventDispatcher:
     def __init__(self):
         self._clients = {}
 

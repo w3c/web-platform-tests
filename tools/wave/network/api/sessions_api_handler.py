@@ -13,7 +13,7 @@ TOKEN_LENGTH = 36
 
 class SessionsApiHandler(ApiHandler):
     def __init__(self, sessions_manager, results_manager, event_dispatcher, web_root):
-        super(SessionsApiHandler, self).__init__(web_root)
+        super().__init__(web_root)
         self._sessions_manager = sessions_manager
         self._results_manager = results_manager
         self._event_dispatcher = event_dispatcher

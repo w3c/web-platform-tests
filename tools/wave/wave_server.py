@@ -16,7 +16,7 @@ from .testing.test_loader import TestLoader
 from .testing.event_dispatcher import EventDispatcher
 
 
-class WaveServer(object):
+class WaveServer:
     def initialize(self,
                    tests,
                    configuration_file_path=None,

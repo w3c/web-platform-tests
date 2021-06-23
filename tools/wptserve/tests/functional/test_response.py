@@ -95,7 +95,7 @@ class TestResponse(TestUsingServer):
         resp = self.request(route[1])
         assert resp.getcode() == 200
         assert resp.read() == resp_content
-        assert sorted([x.lower() for x in resp.info().keys()]) == sorted(['test-header', 'date', 'server', 'content-length'])
+        assert sorted(x.lower() for x in resp.info().keys()) == sorted(['test-header', 'date', 'server', 'content-length'])
 
     def test_write_content_no_status_no_required_headers(self):
         resp_content = b"TEST"
@@ -315,7 +315,7 @@ class TestH2Response(TestUsingH2Server):
         @wptserve.handlers.handler
         def handler(request, response):
             response.encoding = "utf8"
-            t = response.writer.encode(u"hello")
+            t = response.writer.encode("hello")
             assert t == "hello"
 
             with pytest.raises(ValueError):

@@ -30,7 +30,7 @@ class LogMessageHandler:
         self.send_message("log", data)
 
 
-class TestRunner(object):
+class TestRunner:
     """Class implementing the main loop for running tests.
 
     This class delegates the job of actually running a test to the executor
@@ -166,7 +166,7 @@ def next_manager_number():
     return local
 
 
-class BrowserManager(object):
+class BrowserManager:
     def __init__(self, logger, browser, command_queue, no_timeout=False):
         self.logger = logger
         self.browser = browser
@@ -250,7 +250,7 @@ class BrowserManager(object):
         return self.browser.is_alive()
 
 
-class _RunnerManagerState(object):
+class _RunnerManagerState:
     before_init = namedtuple("before_init", [])
     initializing = namedtuple("initializing",
                               ["test", "test_group", "group_metadata", "failure_count"])
@@ -419,7 +419,7 @@ class TestRunnerManager(threading.Thread):
         try:
             command, data = self.command_queue.get(True, 1)
             self.logger.debug("Got command: %r" % command)
-        except IOError:
+        except OSError:
             self.logger.error("Got IOError from poll")
             return RunnerManagerState.restarting(0)
         except Empty:
@@ -838,7 +838,7 @@ def make_test_queue(tests, test_source_cls, **test_source_kwargs):
     return queue
 
 
-class ManagerGroup(object):
+class ManagerGroup:
     """Main thread object that owns all the TestRunnerManager threads."""
     def __init__(self, suite_name, size, test_source_cls, test_source_kwargs,
                  browser_cls, browser_kwargs,

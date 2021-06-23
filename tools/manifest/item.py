@@ -19,8 +19,8 @@ if MYPY:
     from typing import Sequence
     from typing import Hashable
     from .manifest import Manifest
-    Fuzzy = Dict[Optional[Tuple[Text, Text, Text]], List[int]]
-    PageRanges = Dict[Text, List[int]]
+    Fuzzy = Dict[Optional[Tuple[str, str, str]], List[int]]
+    PageRanges = Dict[str, List[int]]
 
 item_types = {}  # type: Dict[str, Type[ManifestItem]]
 
@@ -32,7 +32,7 @@ class ManifestItemMeta(ABCMeta):
 
     def __new__(cls, name, bases, attrs):
         # type: (Type[ManifestItemMeta], str, Tuple[ManifestItemMeta, ...], Dict[str, Any]) -> ManifestItemMeta
-        rv = super(ManifestItemMeta, cls).__new__(cls, name, bases, attrs)
+        rv = super().__new__(cls, name, bases, attrs)
         if not isabstract(rv):
             assert issubclass(rv, ManifestItem)
             assert isinstance(rv.item_type, str)
@@ -113,7 +113,7 @@ class URLManifestItem(ManifestItem):
                  **extras  # type: Any
                  ):
         # type: (...) -> None
-        super(URLManifestItem, self).__init__(tests_root, path)
+        super().__init__(tests_root, path)
         assert url_base[0] == "/"
         self.url_base = url_base
         assert url is None or url[0] != "/"
@@ -131,7 +131,7 @@ class URLManifestItem(ManifestItem):
     @property
     def url(self):
         # type: () -> Text
-        rel_url = self._url or self.path.replace(os.path.sep, u"/")
+        rel_url = self._url or self.path.replace(os.path.sep, "/")
         # we can outperform urljoin, because we know we just have path relative URLs
         if self.url_base == "/":
             return "/" + rel_url
@@ -156,7 +156,7 @@ class URLManifestItem(ManifestItem):
 
     def to_json(self):
         # type: () -> Tuple[Optional[Text], Dict[Any, Any]]
-        rel_url = None if self._url == self.path.replace(os.path.sep, u"/") else self._url
+        rel_url = None if self._url == self.path.replace(os.path.sep, "/") else self._url
         rv = (rel_url, {})  # type: Tuple[Optional[Text], Dict[Any, Any]]
         return rv
 
@@ -210,7 +210,7 @@ class TestharnessTest(URLManifestItem):
 
     def to_json(self):
         # type: () -> Tuple[Optional[Text], Dict[Text, Any]]
-        rv = super(TestharnessTest, self).to_json()
+        rv = super().to_json()
         if self.timeout is not None:
             rv[-1]["timeout"] = self.timeout
         if self.testdriver:
@@ -237,7 +237,7 @@ class RefTest(URLManifestItem):
                  references=None,  # type: Optional[List[Tuple[Text, Text]]]
                  **extras  # type: Any
                  ):
-        super(RefTest, self).__init__(tests_root, path, url_base, url, **extras)
+        super().__init__(tests_root, path, url_base, url, **extras)
         if references is None:
             self.references = []  # type: List[Tuple[Text, Text]]
         else:
@@ -321,7 +321,7 @@ class PrintRefTest(RefTest):
         return self._extras.get("page_ranges", {})
 
     def to_json(self):  # type: ignore
-        rv = super(PrintRefTest, self).to_json()
+        rv = super().to_json()
         if self.page_ranges:
             rv[-1]["page_ranges"] = self.page_ranges
         return rv
@@ -368,7 +368,7 @@ class WebDriverSpecTest(URLManifestItem):
 
     def to_json(self):
         # type: () -> Tuple[Optional[Text], Dict[Text, Any]]
-        rv = super(WebDriverSpecTest, self).to_json()
+        rv = super().to_json()
         if self.timeout is not None:
             rv[-1]["timeout"] = self.timeout
         return rv

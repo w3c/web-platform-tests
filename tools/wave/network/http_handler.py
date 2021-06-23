@@ -3,7 +3,7 @@ import sys
 import traceback
 
 
-class HttpHandler(object):
+class HttpHandler:
     def __init__(
         self,
         static_handler=None,
@@ -90,7 +90,7 @@ class HttpHandler(object):
             response.headers = proxy_response.getheaders()
             response.status = proxy_response.status
 
-        except IOError:
+        except OSError:
             info = sys.exc_info()
             traceback.print_tb(info[2])
             print("Failed to perform proxy request: " +

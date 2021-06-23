@@ -78,7 +78,7 @@ handler returns, or for directly writing to the output stream.
 """
 
 
-class RequestRewriter(object):
+class RequestRewriter:
     def __init__(self, rules):
         """Object for rewriting the request path.
 
@@ -432,7 +432,7 @@ class Http2WebTestRequestHandler(BaseWebTestRequestHandler):
 
         protocol = ""
         for key, value in frame.headers:
-            if key in (b':protocol', u':protocol'):
+            if key in (b':protocol', ':protocol'):
                 protocol = isomorphic_encode(value)
                 break
         if protocol != b"websocket":
@@ -627,7 +627,7 @@ class Http2WebTestRequestHandler(BaseWebTestRequestHandler):
             response.write()
 
 
-class H2ConnectionGuard(object):
+class H2ConnectionGuard:
     """H2Connection objects are not threadsafe, so this keeps thread safety"""
     lock = threading.Lock()
 
@@ -663,7 +663,7 @@ class H2Headers(dict):
         return ['dummy function']
 
 
-class H2HandlerCopy(object):
+class H2HandlerCopy:
     def __init__(self, handler, req_frame, rfile):
         self.headers = H2Headers(req_frame.headers)
         self.command = self.headers['method']
@@ -724,7 +724,7 @@ class Http1WebTestRequestHandler(BaseWebTestRequestHandler):
             self.close_connection = True
         return True
 
-class WebTestHttpd(object):
+class WebTestHttpd:
     """
     :param host: Host from which to serve (default: 127.0.0.1)
     :param port: Port from which to serve (default: 8000)
@@ -803,9 +803,9 @@ class WebTestHttpd(object):
 
         if use_ssl:
             if not os.path.exists(key_file):
-                raise ValueError("SSL certificate not found: {}".format(key_file))
+                raise ValueError(f"SSL certificate not found: {key_file}")
             if not os.path.exists(certificate):
-                raise ValueError("SSL key not found: {}".format(certificate))
+                raise ValueError(f"SSL key not found: {certificate}")
 
         try:
             self.httpd = server_cls((host, port),
@@ -868,7 +868,7 @@ class WebTestHttpd(object):
                            path, query, fragment))
 
 
-class _WebSocketConnection(object):
+class _WebSocketConnection:
     def __init__(self, request_handler, response):
         """Mimic mod_python mp_conn.
 
@@ -889,7 +889,7 @@ class _WebSocketConnection(object):
         return self._request_handler.rfile.read(length)
 
 
-class _WebSocketRequest(object):
+class _WebSocketRequest:
     def __init__(self, request_handler, response):
         """Mimic mod_python request.
 

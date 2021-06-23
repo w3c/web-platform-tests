@@ -16,12 +16,12 @@ wpt_root = os.path.abspath(os.path.join(here, os.pardir, os.pardir))
 
 def load_commands():
     rv = {}
-    with open(os.path.join(here, "paths"), "r") as f:
+    with open(os.path.join(here, "paths")) as f:
         paths = [item.strip().replace("/", os.path.sep) for item in f if item.strip()]
     for path in paths:
         abs_path = os.path.join(wpt_root, path, "commands.json")
         base_dir = os.path.dirname(abs_path)
-        with open(abs_path, "r") as f:
+        with open(abs_path) as f:
             data = json.load(f)
             for command, props in data.items():
                 assert "path" in props

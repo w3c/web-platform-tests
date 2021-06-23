@@ -78,7 +78,7 @@ class ProxyLoggingContext:
         self.logging_thread.join(1)
 
 
-class TestEnvironment(object):
+class TestEnvironment:
     """Context manager that owns the test environment i.e. the http and
     websockets servers"""
     def __init__(self, test_paths, testharness_timeout_multipler,
@@ -257,8 +257,8 @@ class TestEnvironment(object):
             if not pending:
                 return
             time.sleep(each_sleep_secs)
-        raise EnvironmentError("Servers failed to start: %s" %
-                               ", ".join("%s:%s" % item for item in failed))
+        raise OSError("Servers failed to start: %s" %
+                      ", ".join("%s:%s" % item for item in failed))
 
     def test_servers(self):
         failed = []

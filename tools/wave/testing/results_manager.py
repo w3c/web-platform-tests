@@ -19,7 +19,7 @@ from ..data.session import COMPLETED
 WAVE_SRC_DIR = "./tools/wave"
 
 
-class ResultsManager(object):
+class ResultsManager:
     def initialize(
         self,
         results_directory_path,
@@ -214,7 +214,7 @@ class ResultsManager(object):
         api_directory = os.path.join(self._results_directory_path, token, api)
         if not os.path.isdir(api_directory):
             return None
-        return "/results/{}/{}/all.html".format(token, api)
+        return f"/results/{token}/{api}/all.html"
 
     def read_results_wpt_multi_report_uri(self, tokens, api):
         comparison_directory_name = self.get_comparison_identifier(tokens)
@@ -230,7 +230,7 @@ class ResultsManager(object):
         if not os.path.isdir(api_directory_path):
             self.generate_multi_report(tokens, api)
 
-        return "/results/{}/all.html".format(relative_api_directory_path)
+        return f"/results/{relative_api_directory_path}/all.html"
 
     def delete_results(self, token):
         results_directory = os.path.join(self._results_directory_path, token)
@@ -265,7 +265,7 @@ class ResultsManager(object):
                     continue
                 file_path = os.path.join(api_directory, file_name)
                 data = None
-                with open(file_path, "r") as file:
+                with open(file_path) as file:
                     data = file.read()
                 result = json.loads(data)
                 results[api] = result["results"]
@@ -475,7 +475,7 @@ class ResultsManager(object):
         if not os.path.isfile(file_path):
             return None
 
-        with open(file_path, "r") as file:
+        with open(file_path) as file:
             blob = file.read()
             return blob
 
@@ -507,7 +507,7 @@ class ResultsManager(object):
 
         zip.close()
 
-        with open(zip_file_name, "r") as file:
+        with open(zip_file_name) as file:
             blob = file.read()
             os.remove(zip_file_name)
 
@@ -534,7 +534,7 @@ class ResultsManager(object):
                 zip.write(file_path, file_name, zipfile.ZIP_DEFLATED)
         zip.close()
 
-        with open(zip_file_name, "r") as file:
+        with open(zip_file_name) as file:
             blob = file.read()
             os.remove(zip_file_name)
 
@@ -543,7 +543,7 @@ class ResultsManager(object):
     def export_results_overview(self, token):
         session = self._sessions_manager.read_session(token)
         if session is None:
-            raise NotFoundException("Could not find session {}".format(token))
+            raise NotFoundException(f"Could not find session {token}")
 
         tmp_file_name = str(time.time()) + ".zip"
         zip = zipfile.ZipFile(tmp_file_name, "w")
@@ -568,7 +568,7 @@ class ResultsManager(object):
 
         zip.close()
 
-        with open(tmp_file_name, "r") as file:
+        with open(tmp_file_name) as file:
             blob = file.read()
 
             self.remove_tmp_files()
@@ -585,7 +585,7 @@ class ResultsManager(object):
         if not os.path.isfile(info_file_path):
             return None
 
-        with open(info_file_path, "r") as info_file:
+        with open(info_file_path) as info_file:
             data = info_file.read()
             info_file.close()
             info = json.loads(str(data))
@@ -594,7 +594,7 @@ class ResultsManager(object):
     def import_results(self, blob):
         if not self.is_import_enabled:
             raise PermissionDeniedException()
-        tmp_file_name = "{}.zip".format(str(time.time()))
+        tmp_file_name = f"{str(time.time())}.zip"
 
         with open(tmp_file_name, "w") as file:
             file.write(blob)

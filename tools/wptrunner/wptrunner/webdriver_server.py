@@ -18,7 +18,7 @@ __all__ = ["SeleniumServer", "ChromeDriverServer", "CWTChromeDriverServer",
            "ServoDriverServer", "WebKitDriverServer", "WebDriverServer"]
 
 
-class WebDriverServer(object):
+class WebDriverServer:
     __metaclass__ = abc.ABCMeta
 
     default_base_path = "/"
@@ -79,7 +79,7 @@ class WebDriverServer(object):
             self._proc.run()
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise IOError(
+                raise OSError(
                     "WebDriver executable not found: %s" % self.binary)
             raise
         self._output_handler.after_process_start(self._proc.pid)

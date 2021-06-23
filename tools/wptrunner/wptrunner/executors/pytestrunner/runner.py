@@ -79,7 +79,7 @@ def run(path, server_config, session_config, timeout=0, environ=None):
     return (harness.outcome, subtests.results)
 
 
-class HarnessResultRecorder(object):
+class HarnessResultRecorder:
     outcomes = {
         "failed": "ERROR",
         "passed": "OK",
@@ -95,7 +95,7 @@ class HarnessResultRecorder(object):
         self.outcome = (harness_result, None)
 
 
-class SubtestResultRecorder(object):
+class SubtestResultRecorder:
     def __init__(self):
         self.results = []
 
@@ -146,7 +146,7 @@ class SubtestResultRecorder(object):
         self.results.append(new_result)
 
 
-class TemporaryDirectory(object):
+class TemporaryDirectory:
     def __enter__(self):
         self.path = tempfile.mkdtemp(prefix="pytest-")
         return self.path

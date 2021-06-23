@@ -76,7 +76,7 @@ class BrowserError(Exception):
     pass
 
 
-class Browser(object):
+class Browser:
     """Abstract class serving as the basis for Browser implementations.
 
     The Browser is used in the TestRunnerManager to start and stop the browser
@@ -155,7 +155,7 @@ class Browser(object):
 
 class NullBrowser(Browser):
     def __init__(self, logger, **kwargs):
-        super(NullBrowser, self).__init__(logger)
+        super().__init__(logger)
 
     def start(self, **kwargs):
         """No-op browser to use in scenarios where the TestRunnerManager shouldn't

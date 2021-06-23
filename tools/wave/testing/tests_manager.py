@@ -7,7 +7,7 @@ from ..data.exceptions.not_found_exception import NotFoundException
 from ..data.session import COMPLETED, ABORTED
 
 
-class TestsManager(object):
+class TestsManager:
     def initialize(
         self,
         test_loader,

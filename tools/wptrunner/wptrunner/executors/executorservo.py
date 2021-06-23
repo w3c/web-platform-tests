@@ -160,7 +160,7 @@ class ServoTestharnessExecutor(ProcessTestExecutor):
         self.result_flag.set()
 
 
-class TempFilename(object):
+class TempFilename:
     def __init__(self, directory):
         self.directory = directory
         self.path = None

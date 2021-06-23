@@ -8,7 +8,7 @@ global logger
 logger = logging.getLogger("wave-api-handler")
 
 
-class ApiHandler(object):
+class ApiHandler:
     def __init__(self, web_root):
         self._web_root = web_root
 
@@ -50,4 +50,4 @@ class ApiHandler(object):
     def handle_exception(self, message):
         info = sys.exc_info()
         traceback.print_tb(info[2])
-        logger.error("{}: {}: {}".format(message, info[0].__name__, info[1].args[0]))
+        logger.error(f"{message}: {info[0].__name__}: {info[1].args[0]}")

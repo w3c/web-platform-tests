@@ -78,10 +78,7 @@ class WebDriverBaseProtocolPart(BaseProtocolPart):
                 # by ignoring it it's possible to reload the test whilst the
                 # harness remains paused
                 pass
-            except (socket.timeout,
-                    client.NoSuchWindowException,
-                    client.UnknownErrorException,
-                    IOError):
+            except (socket.timeout, client.NoSuchWindowException, client.UnknownErrorException, OSError):
                 break
             except Exception:
                 self.logger.error(traceback.format_exc())
@@ -312,7 +309,7 @@ class WebDriverProtocol(Protocol):
                   WebDriverDebugProtocolPart]
 
     def __init__(self, executor, browser, capabilities, **kwargs):
-        super(WebDriverProtocol, self).__init__(executor, browser)
+        super().__init__(executor, browser)
         self.capabilities = capabilities
         self.url = browser.webdriver_url
         self.webdriver = None

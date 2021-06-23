@@ -73,7 +73,7 @@ def env_options():
     return {"server_host": "127.0.0.1"}
 
 
-class LogcatRunner(object):
+class LogcatRunner:
     def __init__(self, logger, browser, remote_queue):
         self.logger = logger
         self.browser = browser
@@ -133,7 +133,7 @@ class ChromeAndroidBrowserBase(Browser):
                  webdriver_args=None,
                  stackwalk_binary=None,
                  symbols_path=None):
-        super(ChromeAndroidBrowserBase, self).__init__(logger)
+        super().__init__(logger)
         self.device_serial = device_serial
         self.stackwalk_binary = stackwalk_binary
         self.symbols_path = symbols_path
@@ -229,7 +229,7 @@ class ChromeAndroidBrowser(ChromeAndroidBrowserBase):
                  webdriver_args=None,
                  stackwalk_binary=None,
                  symbols_path=None):
-        super(ChromeAndroidBrowser, self).__init__(logger,
+        super().__init__(logger,
                 webdriver_binary, remote_queue, device_serial,
                 webdriver_args, stackwalk_binary, symbols_path)
         self.package_name = package_name

@@ -24,7 +24,7 @@ class WptrunnerHelpAction(argparse.Action):
                  dest=argparse.SUPPRESS,
                  default=argparse.SUPPRESS,
                  help=None):
-        super(WptrunnerHelpAction, self).__init__(
+        super().__init__(
             option_strings=option_strings,
             dest=dest,
             default=default,
@@ -130,7 +130,7 @@ def check_environ(product):
         else:
             wpt_path = os.path.join(wpt_root, "wpt")
 
-        with open(hosts_path, "r") as f:
+        with open(hosts_path) as f:
             for line in f:
                 line = line.split("#", 1)[0].strip()
                 parts = line.split()
@@ -152,7 +152,7 @@ in PowerShell with Administrator privileges.""" % (wpt_path, hosts_path)
                 raise WptrunError(message)
 
 
-class BrowserSetup(object):
+class BrowserSetup:
     name = None  # type: ClassVar[str]
     browser_cls = None  # type: ClassVar[Type[browser.Browser]]
 

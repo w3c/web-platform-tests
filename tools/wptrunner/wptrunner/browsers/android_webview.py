@@ -88,7 +88,7 @@ class SystemWebViewShell(ChromeAndroidBrowserBase):
                  symbols_path=None):
         """Creates a new representation of Chrome.  The `binary` argument gives
         the browser binary to use for testing."""
-        super(SystemWebViewShell, self).__init__(logger,
+        super().__init__(logger,
                 webdriver_binary, remote_queue, device_serial,
                 webdriver_args, stackwalk_binary, symbols_path)
         self.binary = binary
