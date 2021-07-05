@@ -1,0 +1,401 @@
+[
+  "# This resource is generated. Please don't edit.",
+  {
+    "input": "\u0000",
+    "output": null
+  },
+  {
+    "input": "\u0001",
+    "output": "\u0001"
+  },
+  {
+    "input": "\u0002",
+    "output": "\u0002"
+  },
+  {
+    "input": "\u0003",
+    "output": "\u0003"
+  },
+  {
+    "input": "\u0004",
+    "output": "\u0004"
+  },
+  {
+    "input": "\u0005",
+    "output": "\u0005"
+  },
+  {
+    "input": "\u0006",
+    "output": "\u0006"
+  },
+  {
+    "input": "\u0007",
+    "output": "\u0007"
+  },
+  {
+    "input": "\b",
+    "output": "\b"
+  },
+  {
+    "input": "\u000b",
+    "output": "\u000b"
+  },
+  {
+    "input": "\f",
+    "output": "\f"
+  },
+  {
+    "input": "\u000e",
+    "output": "\u000e"
+  },
+  {
+    "input": "\u000f",
+    "output": "\u000f"
+  },
+  {
+    "input": "\u0010",
+    "output": "\u0010"
+  },
+  {
+    "input": "\u0011",
+    "output": "\u0011"
+  },
+  {
+    "input": "\u0012",
+    "output": "\u0012"
+  },
+  {
+    "input": "\u0013",
+    "output": "\u0013"
+  },
+  {
+    "input": "\u0014",
+    "output": "\u0014"
+  },
+  {
+    "input": "\u0015",
+    "output": "\u0015"
+  },
+  {
+    "input": "\u0016",
+    "output": "\u0016"
+  },
+  {
+    "input": "\u0017",
+    "output": "\u0017"
+  },
+  {
+    "input": "\u0018",
+    "output": "\u0018"
+  },
+  {
+    "input": "\u0019",
+    "output": "\u0019"
+  },
+  {
+    "input": "\u001a",
+    "output": "\u001a"
+  },
+  {
+    "input": "\u001b",
+    "output": "\u001b"
+  },
+  {
+    "input": "\u001c",
+    "output": "\u001c"
+  },
+  {
+    "input": "\u001d",
+    "output": "\u001d"
+  },
+  {
+    "input": "\u001e",
+    "output": "\u001e"
+  },
+  {
+    "input": "\u001f",
+    "output": "\u001f"
+  },
+  {
+    "input": " ",
+    "output": null
+  },
+  {
+    "input": "!",
+    "output": "!"
+  },
+  {
+    "input": "\"",
+    "output": "\""
+  },
+  {
+    "input": "#",
+    "onlySetters": true,
+    "output": null
+  },
+  {
+    "input": "$",
+    "output": "$"
+  },
+  {
+    "input": "%",
+    "output": null
+  },
+  {
+    "input": "&",
+    "output": "&"
+  },
+  {
+    "input": "'",
+    "output": "'"
+  },
+  {
+    "input": "(",
+    "output": "("
+  },
+  {
+    "input": ")",
+    "output": ")"
+  },
+  {
+    "input": "*",
+    "output": "*"
+  },
+  {
+    "input": "+",
+    "output": "+"
+  },
+  {
+    "input": ",",
+    "output": ","
+  },
+  {
+    "input": "-",
+    "output": "-"
+  },
+  {
+    "input": ".",
+    "output": "."
+  },
+  {
+    "input": "/",
+    "onlySetters": true,
+    "output": null
+  },
+  {
+    "input": "0",
+    "output": "0.0.0.0"
+  },
+  {
+    "input": "1",
+    "output": "0.0.0.1"
+  },
+  {
+    "input": "2",
+    "output": "0.0.0.2"
+  },
+  {
+    "input": "3",
+    "output": "0.0.0.3"
+  },
+  {
+    "input": "4",
+    "output": "0.0.0.4"
+  },
+  {
+    "input": "5",
+    "output": "0.0.0.5"
+  },
+  {
+    "input": "6",
+    "output": "0.0.0.6"
+  },
+  {
+    "input": "7",
+    "output": "0.0.0.7"
+  },
+  {
+    "input": "8",
+    "output": "0.0.0.8"
+  },
+  {
+    "input": "9",
+    "output": "0.0.0.9"
+  },
+  {
+    "input": ":",
+    "onlySetters": true,
+    "output": null
+  },
+  {
+    "input": ";",
+    "output": ";"
+  },
+  {
+    "input": "<",
+    "output": "<"
+  },
+  {
+    "input": "=",
+    "output": "="
+  },
+  {
+    "input": ">",
+    "output": ">"
+  },
+  {
+    "input": "?",
+    "onlySetters": true,
+    "output": null
+  },
+  {
+    "input": "@",
+    "onlySetters": true,
+    "output": null
+  },
+  {
+    "input": "A",
+    "output": "a"
+  },
+  {
+    "input": "B",
+    "output": "b"
+  },
+  {
+    "input": "C",
+    "output": "c"
+  },
+  {
+    "input": "D",
+    "output": "d"
+  },
+  {
+    "input": "E",
+    "output": "e"
+  },
+  {
+    "input": "F",
+    "output": "f"
+  },
+  {
+    "input": "G",
+    "output": "g"
+  },
+  {
+    "input": "H",
+    "output": "h"
+  },
+  {
+    "input": "I",
+    "output": "i"
+  },
+  {
+    "input": "J",
+    "output": "j"
+  },
+  {
+    "input": "K",
+    "output": "k"
+  },
+  {
+    "input": "L",
+    "output": "l"
+  },
+  {
+    "input": "M",
+    "output": "m"
+  },
+  {
+    "input": "N",
+    "output": "n"
+  },
+  {
+    "input": "O",
+    "output": "o"
+  },
+  {
+    "input": "P",
+    "output": "p"
+  },
+  {
+    "input": "Q",
+    "output": "q"
+  },
+  {
+    "input": "R",
+    "output": "r"
+  },
+  {
+    "input": "S",
+    "output": "s"
+  },
+  {
+    "input": "T",
+    "output": "t"
+  },
+  {
+    "input": "U",
+    "output": "u"
+  },
+  {
+    "input": "V",
+    "output": "v"
+  },
+  {
+    "input": "W",
+    "output": "w"
+  },
+  {
+    "input": "X",
+    "output": "x"
+  },
+  {
+    "input": "Y",
+    "output": "y"
+  },
+  {
+    "input": "Z",
+    "output": "z"
+  },
+  {
+    "input": "[",
+    "output": null
+  },
+  {
+    "input": "\\",
+    "onlySetters": true,
+    "output": null
+  },
+  {
+    "input": "]",
+    "output": null
+  },
+  {
+    "input": "^",
+    "output": "^"
+  },
+  {
+    "input": "_",
+    "output": "_"
+  },
+  {
+    "input": "`",
+    "output": "`"
+  },
+  {
+    "input": "{",
+    "output": "{"
+  },
+  {
+    "input": "|",
+    "output": "|"
+  },
+  {
+    "input": "}",
+    "output": "}"
+  },
+  {
+    "input": "~",
+    "output": "~"
+  }
+]
