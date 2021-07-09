@@ -20,11 +20,14 @@ class RouteTokenizer(object):
         return ("star", token[1:-3])
 
     def scan(self, input_str):
-        scanner = re.Scanner([(r"/", self.slash),
-                              (r"{\w*}", self.group),
-                              (r"\*", self.star),
-                              (r"(?:\\.|[^{\*/])*", self.literal),])
-        return scanner.scan(input_str)
+        return self.scanner.scan(input_str)
+
+    # re.Scanner is missing from typeshed:
+    # https://github.com/python/typeshed/pull/3071
+    scanner = re.Scanner([(r"/", slash),  # type: ignore
+                          (r"{\w*}", group),
+                          (r"\*", star),
+                          (r"(?:\\.|[^{\*/])*", literal),])
 
 class RouteCompiler(object):
     def __init__(self):
