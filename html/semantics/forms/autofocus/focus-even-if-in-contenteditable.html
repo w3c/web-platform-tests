@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>autofocus focuses the element, even if a contenteditable is currently focused</title>
+
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+
+<div contenteditable></div>
+
+<script>
+"use strict";
+
+promise_test(
+  t => {
+    return Promise.race([
+      waitForUserInteractionTaskSource(),
+      new Promise((resolve, reject) => {
+        t.step_timeout(() => reject(new Error("select event wasn't fired after 100 ms")), 100);
+      })
+    ]);
+  },
+  "prerequisite: setSelectionRange fires a select event, so we can test the user interaction task source accurately"
+);
+
+promise_test(async t => {
+  // https://github.com/whatwg/html/issues/3551
+  await waitForFirstFrame();
+
+  document.querySelector("[contenteditable]").focus();
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.autofocus = true;
+
+  // This should queue a task on the user interaction task source to focus input.
+  document.body.appendChild(input);
+
+  // If waitForUserInteractionTaskSource doesn't work (which appears to be the case with Safari
+  // 12.2/Safari Tech Preview 81), then do the test anyway after a bit. The prerequisite test
+  // will fail, so folks will know something's up.
+  await Promise.race([
+    waitForUserInteractionTaskSource(),
+    new Promise(resolve => t.step_timeout(resolve, 100))
+  ]);
+
+  assert_equals(document.activeElement, input);
+}, "The activeElement changes correctly after inserting an autofocused input");
+
+function waitForUserInteractionTaskSource() {
+  return new Promise(resolve => {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = "string";
+    input.onselect = () => resolve();
+
+    // This queues a task on the user interaction task source to fire a select event.
+    input.setSelectionRange(0, 1);
+  });
+}
+
+function waitForFirstFrame() {
+  return new Promise(resolve => requestAnimationFrame(resolve));
+}
+</script>
