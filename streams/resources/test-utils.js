@@ -1,12 +1,5 @@
 'use strict';
 
-self.methodRejects = (t, obj, methodName, target, args) => {
-  const method = obj[methodName];
-
-  return promise_rejects_js(t, TypeError, method.apply(target, args),
-                         methodName + ' should reject with a TypeError');
-};
-
 self.garbageCollect = () => {
   if (self.gc) {
     // Use --expose_gc for V8 (and Node.js)
