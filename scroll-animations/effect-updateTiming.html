@@ -399,7 +399,7 @@ promise_test(t => {
       100,
       'Effect duration should remain at 100% for progress based animations'
     );
-    assert_times_equal(anim.startTime, originalStartTime,
+    assert_css_numberish_equals(anim.startTime, originalStartTime,
                        'startTime should be unaffected by changing effect ' +
                        'duration');
 

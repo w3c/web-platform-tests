@@ -39,14 +39,14 @@
     // Verify initial start and current times in Pending state.
     assert_percent_css_unit_value_approx_equals(animation.currentTime, 0, 0.01,
       "The current time is zero in Pending state.");
-    assert_equals(animation.startTime, 0,
+      assert_percent_css_unit_value_approx_equals(animation.startTime, 0, 0.01,
       "The start time is zero in Pending state.");
 
     await animation.ready;
     // Verify initial start and current times in Playing state.
     assert_percent_css_unit_value_approx_equals(animation.currentTime, 0, 0.01,
       "The current time is zero in Playing state.");
-    assert_equals(animation.startTime, 0,
+    assert_percent_css_unit_value_approx_equals(animation.startTime, 0, 0.01,
       "The start time is zero in Playing state.");
 
     // Now do some scrolling and make sure that the Animation current time is
@@ -85,14 +85,14 @@ promise_test(async t => {
     // Verify initial start and current times in Pending state.
     assert_css_numberish_equals(animation.currentTime, animation.timeline.currentTime,
       "The current time is a hold time in Pending state.");
-    assert_equals(animation.startTime, 0,
+    assert_percent_css_unit_value_approx_equals(animation.startTime, 0, 0.01,
       "The start time is zero in Pending state.");
 
     await animation.ready;
     // Verify initial start and current times in Playing state.
     assert_css_numberish_equals(animation.currentTime, animation.timeline.currentTime,
       "The current corresponds to the scroll position of the scroller.");
-    assert_equals(animation.startTime, 0,
+    assert_percent_css_unit_value_approx_equals(animation.startTime, 0, 0.01,
       "The start time is zero in Playing state.");
 }, 'Animation start and current times are correct for each animation state' +
     ' when the animation starts playing with advanced scroller.');
@@ -125,12 +125,12 @@ promise_test(async t => {
     assert_css_numberish_equals(animation1.currentTime, timeline.currentTime,
       "The current time corresponds to the scroll position of the scroller" +
         " in Pending state.");
-    assert_equals(animation1.startTime, 0,
+    assert_percent_css_unit_value_approx_equals(animation1.startTime, 0, 0.01,
       "The start time is zero in Pending state.");
       assert_css_numberish_equals(animation2.currentTime, timeline.currentTime,
       "The current time corresponds to the scroll position of the scroller" +
         " in Pending state.");
-    assert_equals(animation2.startTime, 0,
+    assert_percent_css_unit_value_approx_equals(animation2.startTime, 0, 0.01,
       "The start time is zero in Pending state.");
 
     await animation1.ready;
@@ -138,11 +138,11 @@ promise_test(async t => {
     // Verify initial start and current times in Playing state.
     assert_css_numberish_equals(animation1.currentTime, timeline.currentTime,
       "The current corresponds to the scroll position of the scroller.");
-    assert_equals(animation1.startTime, 0,
+    assert_percent_css_unit_value_approx_equals(animation1.startTime, 0, 0.01,
       "The start time is zero in Playing state.");
       assert_css_numberish_equals(animation2.currentTime, timeline.currentTime,
       "The current corresponds to the scroll position of the scroller.");
-    assert_equals(animation2.startTime, 0,
+    assert_percent_css_unit_value_approx_equals(animation2.startTime, 0, 0.01,
       "The start time is zero in Playing state.");
 }, 'Animation start and current times are correct when multiple animations' +
     ' are attached to the same timeline.');
