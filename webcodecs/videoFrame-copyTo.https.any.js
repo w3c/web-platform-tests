@@ -47,7 +47,7 @@ function assert_layout_equals(actual, expected) {
     assert_object_equals(actual[i], expected[i], 'plane ' + i + ' layout');
   }
 }
-
+/*
 promise_test(async t => {
   const frame = makeI420_4x2();
   frame.close();
@@ -57,6 +57,29 @@ promise_test(async t => {
   let data = new Uint8Array(12);
   await promise_rejects_dom(t, 'InvalidStateError', frame.copyTo(data), 'copyTo()');
 }, 'Test closed frame.');
+*/
+promise_test(async t => {
+  const frame = makeI420_4x2();
+  const expectedLayout = [
+      {offset: 0, stride: 4},
+      {offset: 8, stride: 2},
+      {offset: 10, stride: 2},
+  ];
+  const expectedData = new Uint8Array([
+      1, 2, 3, 4,  // y
+      5, 6, 7, 8,
+      9, 10,       // u
+      11, 12       // v
+  ]);
+
+  assert_true(self.crossOriginIsolated,
+                "The page is served with COOP and COEP, it should be cross-origin-isolated.");
+  assert_equals(frame.allocationSize(), expectedData.length, 'allocationSize()');
+  const data = new SharedArrayBuffer(expectedData.length);
+  const layout = await frame.copyTo(data);
+  assert_layout_equals(layout, expectedLayout);
+  assert_buffer_equals(new Uint8Array(data), expectedData);
+}, 'Test I420 frame to SharedArrayBuffer.');
 
 promise_test(async t => {
   const frame = makeI420_4x2();
@@ -71,13 +94,64 @@ promise_test(async t => {
       9, 10,       // u
       11, 12       // v
   ]);
+
+  assert_true(self.crossOriginIsolated,
+                "The page is served with COOP and COEP, it should be cross-origin-isolated.");
   assert_equals(frame.allocationSize(), expectedData.length, 'allocationSize()');
-  const data = new Uint8Array(expectedData.length);
+  const data = new SharedArrayBuffer(expectedData.length);
+  const dataView = new Uint8Array(data);
+  const layout = await frame.copyTo(dataView);
+  assert_layout_equals(layout, expectedLayout);
+  assert_buffer_equals(dataView, expectedData);
+}, 'Test I420 frame to SharedArrayBuffer wrapped in View.');
+
+promise_test(async t => {
+  const frame = makeI420_4x2();
+  const expectedLayout = [
+      {offset: 0, stride: 4},
+      {offset: 8, stride: 2},
+      {offset: 10, stride: 2},
+  ];
+  const expectedData = new Uint8Array([
+      1, 2, 3, 4,  // y
+      5, 6, 7, 8,
+      9, 10,       // u
+      11, 12       // v
+  ]);
+
+  assert_true(self.crossOriginIsolated,
+                "The page is served with COOP and COEP, it should be cross-origin-isolated.");
+  assert_equals(frame.allocationSize(), expectedData.length, 'allocationSize()');
+  const dataView = new Uint8Array(expectedData.length);
+  const layout = await frame.copyTo(dataView);
+  assert_layout_equals(layout, expectedLayout);
+  assert_buffer_equals(dataView, expectedData);
+}, 'Test I420 frame to non-shared ArrayBufferView');
+
+promise_test(async t => {
+  const frame = makeI420_4x2();
+  const expectedLayout = [
+      {offset: 0, stride: 4},
+      {offset: 8, stride: 2},
+      {offset: 10, stride: 2},
+  ];
+  const expectedData = new Uint8Array([
+      1, 2, 3, 4,  // y
+      5, 6, 7, 8,
+      9, 10,       // u
+      11, 12       // v
+  ]);
+
+  assert_true(self.crossOriginIsolated,
+                "The page is served with COOP and COEP, it should be cross-origin-isolated.");
+  assert_equals(frame.allocationSize(), expectedData.length, 'allocationSize()');
+  const data = new ArrayBuffer(expectedData.length);
   const layout = await frame.copyTo(data);
   assert_layout_equals(layout, expectedLayout);
-  assert_buffer_equals(data, expectedData);
-}, 'Test I420 frame.');
+  assert_buffer_equals(new Uint8Array(data), expectedData);
+}, 'Test I420 frame to non-shared ArrayBuffer');
 
+/*
 promise_test(async t => {
   const frame = makeRGBA_2x2();
   const expectedLayout = [
@@ -259,3 +333,4 @@ promise_test(async t => {
   const data = new Uint8Array(12);
   await promise_rejects_js(t, TypeError, frame.copyTo(data, options));
 }, 'Test invalid rect.');
+*/
