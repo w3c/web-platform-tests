@@ -105,6 +105,10 @@ callback EncodedVideoChunkOutputCallback =
 
 dictionary EncodedVideoChunkMetadata {
   VideoDecoderConfig decoderConfig;
+  SvcOutputMetadata svc;
+};
+
+dictionary SvcOutputMetadata {
   unsigned long temporalLayerId;
 };
 
@@ -161,12 +165,19 @@ dictionary VideoEncoderConfig {
   [EnforceRange] unsigned long displayHeight;
   HardwareAcceleration hardwareAcceleration = "allow";
   DOMString scalabilityMode;
+  BitrateMode bitrateMode = "variable";
+  LatencyMode latencyMode = "quality";
 };
 
 enum HardwareAcceleration {
   "allow",
   "deny",
   "require",
+};
+
+enum LatencyMode {
+  "quality",
+  "realtime"
 };
 
 dictionary VideoEncoderEncodeOptions {
@@ -226,7 +237,7 @@ enum EncodedVideoChunkType {
     "delta",
 };
 
-[Exposed=(Window,DedicatedWorker)]
+[Exposed=(Window,DedicatedWorker), Serializable, Transferable]
 interface AudioData {
   constructor(AudioDataInit init);
 
@@ -271,25 +282,26 @@ enum AudioSampleFormat {
   "FLTP",
 };
 
-[Exposed=(Window,DedicatedWorker)]
+[Exposed=(Window,DedicatedWorker), Serializable, Transferable]
 interface VideoFrame {
   constructor(CanvasImageSource image, optional VideoFrameInit init = {});
-  constructor(sequence<(Plane or PlaneInit)> planes,
+  constructor(sequence<PlaneInit> planes,
               VideoFramePlaneInit init);
 
   readonly attribute PixelFormat format;
-  readonly attribute FrozenArray<Plane>? planes;
   readonly attribute unsigned long codedWidth;
   readonly attribute unsigned long codedHeight;
-  readonly attribute unsigned long cropLeft;
-  readonly attribute unsigned long cropTop;
-  readonly attribute unsigned long cropWidth;
-  readonly attribute unsigned long cropHeight;
+  readonly attribute DOMRectReadOnly? codedRect;
+  readonly attribute DOMRectReadOnly? visibleRect;
   readonly attribute unsigned long displayWidth;
   readonly attribute unsigned long displayHeight;
   readonly attribute unsigned long long? duration;  // microseconds
   readonly attribute long long? timestamp;          // microseconds
-
+  unsigned long allocationSize(
+      optional VideoFrameCopyToOptions options = {});
+  Promise<sequence<PlaneLayout>> copyTo(
+      [AllowShared] BufferSource destination,
+      optional VideoFrameCopyToOptions options = {});
   VideoFrame clone();
   undefined close();
 };
@@ -303,29 +315,27 @@ dictionary VideoFramePlaneInit {
   required PixelFormat format;
   [EnforceRange] required unsigned long codedWidth;
   [EnforceRange] required unsigned long codedHeight;
-  [EnforceRange] unsigned long cropLeft;
-  [EnforceRange] unsigned long cropTop;
-  [EnforceRange] unsigned long cropWidth;
-  [EnforceRange] unsigned long cropHeight;
+  DOMRectInit visibleRect;
   [EnforceRange] unsigned long displayWidth;
   [EnforceRange] unsigned long displayHeight;
   [EnforceRange] unsigned long long duration;  // microseconds
   [EnforceRange] long long timestamp;          // microseconds
 };
 
-[Exposed=(Window,DedicatedWorker)]
-interface Plane {
-  readonly attribute unsigned long stride;
-  readonly attribute unsigned long rows;
-  readonly attribute unsigned long length;
-
-  undefined readInto(ArrayBufferView dst);
+dictionary PlaneInit {
+  required BufferSource data;
+  [EnforceRange] required unsigned long stride;
+  [EnforceRange] unsigned long offset = 0;
 };
 
-dictionary PlaneInit {
-  required BufferSource src;
+dictionary VideoFrameCopyToOptions {
+  DOMRectInit rect;
+  sequence<PlaneLayout> layout;
+};
+
+dictionary PlaneLayout {
+  [EnforceRange] required unsigned long offset;
   [EnforceRange] required unsigned long stride;
-  [EnforceRange] required unsigned long rows;
 };
 
 enum PixelFormat {
