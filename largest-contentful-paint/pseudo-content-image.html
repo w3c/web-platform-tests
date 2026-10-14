@@ -25,7 +25,7 @@
         const url = window.location.origin + '/images/lcp-256x256.png';
         checkImage(entries[0], url, 'target', 65536, beforeLoad);
     }));
-    observer.observe({entryTypes: ['largest-contentful-paint']});
+    observer.observe({type: 'largest-contentful-paint', buffered: true});
   }, 'Largest Contentful Paint: CSS content image on a pseudo element is observable.');
   </script>
   <div id="target"></div>
