@@ -811,7 +811,7 @@ class FirefoxAndroid(Browser):
     def download(self, dest=None, channel=None, rename=None, url=None):
         if url is None:
             if dest is None:
-                dest = os.pwd
+                dest = os.getcwd()
 
             branches = {
                 "stable": "mozilla-release",
@@ -827,7 +827,7 @@ class FirefoxAndroid(Browser):
 
         filename = "geckoview-test_runner.apk"
         if rename:
-            filename = "%s%s" % (rename, get_ext(filename)[1])
+            filename = "%s%s" % (rename, get_ext(filename))
         self.apk_path = os.path.join(dest, filename)
 
         with open(self.apk_path, "wb") as f:
