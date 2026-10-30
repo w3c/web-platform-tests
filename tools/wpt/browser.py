@@ -819,8 +819,14 @@ class FirefoxAndroid(Browser):
             }
             branch = branches.get(channel, "mozilla-central")
 
+            # The emulator (see android.py) matches the host CPU, so the APK must too
+            from . import android
+            host_cpu = android.get_host_cpu()
+            if host_cpu not in ("x86_64", "aarch64"):
+                raise NotImplementedError(f"Unsupported host CPU architecture {host_cpu}")
+
             resp = get_taskcluster_artifact(
-                f"gecko.v2.{branch}.shippable.latest.mobile.android-x86_64-opt",
+                f"gecko.v2.{branch}.shippable.latest.mobile.android-{host_cpu}-opt",
                 "public/build/geckoview-test_runner.apk")
         else:
             resp = get(url)
