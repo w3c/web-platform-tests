@@ -1,4 +1,4 @@
-// META: global=window,dedicatedworker,sharedworker
+// META: global=window,dedicatedworker
 // META: script=resources/helpers.js
 //
 // A cross-site lookup budget, and rate limiting of lookups in general:

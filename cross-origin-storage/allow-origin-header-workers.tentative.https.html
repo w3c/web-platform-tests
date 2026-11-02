@@ -60,10 +60,15 @@ async function storeFromDedicatedWorker(ctx, hash, content, origins, {fromBlob =
 }
 
 // Connects `ctx` to the shared worker named `name` and waits until the worker
-// has answered, so that `ctx`'s document is in the worker's owner set.
+// has answered, so that `ctx`'s document is in the worker's owner set. Every
+// owner delegates cross-origin-storage through `allow`, which a shared worker
+// needs to use COS at all under Permissions Policy for workers
+// (https://github.com/explainers-by-googlers/workers-permissions-policy), and
+// which every connection to it has to repeat.
 async function connectSharedWorker(ctx, name) {
   return ctx.execute_script(async (scriptUrl, name) => {
-    self.cosSharedWorker = new SharedWorker(scriptUrl, name);
+    self.cosSharedWorker =
+        new SharedWorker(scriptUrl, {name, allow: 'cross-origin-storage'});
     const port = self.cosSharedWorker.port;
     return new Promise((resolve) => {
       port.onmessage = (e) => resolve(e.data);

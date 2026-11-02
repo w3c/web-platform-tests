@@ -1,4 +1,4 @@
-// META: global=window,dedicatedworker,sharedworker
+// META: global=window,dedicatedworker
 // META: script=../resources/helpers.js
 // META: script=../resources/integration-helpers.js
 //

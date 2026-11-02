@@ -1,4 +1,4 @@
-// META: global=window,dedicatedworker,sharedworker
+// META: global=window,dedicatedworker
 // META: script=resources/helpers.js
 //
 // Tests the core create/write/read lifecycle:

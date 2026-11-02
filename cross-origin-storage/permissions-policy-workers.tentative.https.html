@@ -16,14 +16,22 @@
 // https://wicg.github.io/cross-origin-storage/#permissions-policy-integration
 //
 // "check Cross-Origin Storage permission" is stated over the calling global,
-// not over a Document. For a worker it resolves through the worker's owner
-// set: every owning Document (transitively) must permit the feature. A
-// CrossOriginStorageManager exposed on a worker global must therefore honor
-// the owning document's Permissions Policy, and in particular a worker cannot
-// be used to escape a `cross-origin-storage=()` policy on the page that
-// created it -- including a blob: worker, which runs in the creating page's
-// own origin and shares its COS view. A ServiceWorkerGlobalScope has an empty
-// owner set, so the check fails closed there.
+// following Permissions Policy for workers
+// (https://github.com/explainers-by-googlers/workers-permissions-policy), which
+// the spec relies on as if it existed already:
+//
+// - A dedicated worker inherits its owning documents' policy, transitively, so
+//   it cannot be used to escape a `cross-origin-storage=()` policy on the page
+//   that created it -- including a blob: worker, which runs in the creating
+//   page's own origin and shares its COS view.
+// - A shared worker has a policy of its own, holding only what its creator
+//   delegated through the `allow` option. A document that cannot delegate the
+//   feature can neither create such a worker nor connect to one.
+// - cross-origin-storage cannot be enabled in service workers, so the check
+//   fails closed there.
+//
+// The shared worker tests depend on the SharedWorker `allow` option, which no
+// specification defines yet.
 
 const {HTTPS_ORIGIN} = get_host_info();
 
@@ -114,11 +122,10 @@ promise_test(async t => {
 }, 'a policy-blocked worker rejects with NotAllowedError even for a request that would otherwise fail validation');
 
 promise_test(async t => {
-  // A ServiceWorkerGlobalScope has an empty owner set, so "check Cross-Origin
-  // Storage permission" returns false and the call fails closed with
-  // NotAllowedError -- even from a top-level, same-origin, policy-allowed page.
-  // This is a conservative placeholder (see the spec note), pinned so a change
-  // to it is a deliberate one.
+  // cross-origin-storage is not a feature that can be enabled in service
+  // workers, so "check Cross-Origin Storage permission" returns false and the
+  // call fails closed with NotAllowedError -- even from a top-level,
+  // same-origin, policy-allowed page.
   const scope = `resources/cos-sw-scope-${token()}/`;
   const reg = await navigator.serviceWorker.register(
     'resources/cos-permission-sw.js', {scope});
@@ -138,40 +145,52 @@ promise_test(async t => {
   });
   assert_false(result.ok, 'a service worker must not obtain a COS handle');
   assert_equals(result.name, 'NotAllowedError',
-    'a ServiceWorkerGlobalScope has an empty owner set, so the permission check fails closed');
-}, 'a service worker cannot use crossOriginStorage (empty owner set fails closed)');
+    'cross-origin-storage cannot be enabled in a service worker, so the permission check fails closed');
+}, 'a service worker cannot use crossOriginStorage (the feature cannot be enabled in service workers)');
 
-// The owner-set resolution applies to every kind of worker, whatever its
-// script URL. `resources/cos-policy-worker.js` is loaded from its own
-// same-origin URL, as a dedicated worker, as a shared worker, or as a
-// dedicated worker nested in a dedicated worker, whose owner is a
-// WorkerGlobalScope that resolves to the document in turn.
+// The check applies to every kind of worker, whatever its script URL.
+// `resources/cos-policy-worker.js` is loaded from its own same-origin URL, as a
+// dedicated worker, as a shared worker created with
+// `allow: 'cross-origin-storage'`, or as a dedicated worker nested in a
+// dedicated worker, whose owner is a WorkerGlobalScope that resolves to the
+// document in turn.
 const POLICY_WORKER_URL =
   new URL('resources/cos-policy-worker.js', location.href).href;
 const BLOCKED = 'header(Permissions-Policy,cross-origin-storage=\\(\\))';
 
 // Runs, inside the RemoteContext `ctx`, a worker of `kind` ("dedicated",
 // "shared", or "nested") from POLICY_WORKER_URL that attempts a COS read for
-// `hash`. A shared worker is kept alive on the context's global under `name`,
-// so that a later call with the same `name` reaches the same worker.
-async function urlWorkerRead(ctx, kind, hash, name = token()) {
-  return ctx.execute_script(async (url, kind, hash, name) => {
+// `hash`. A shared worker is created with `allow` (by default
+// 'cross-origin-storage') and kept alive on the context's global under `name`,
+// so that a later call with the same `name` reaches the same worker. Resolves
+// to the worker's {ok} / {ok:false,name,message} descriptor, or to
+// {connected: false} when a shared worker fires `error` because the connection
+// was refused.
+async function urlWorkerRead(ctx, kind, hash,
+                             {name = token(), allow = 'cross-origin-storage'} = {}) {
+  return ctx.execute_script(async (url, kind, hash, name, allow) => {
     self.cosSharedWorkers = self.cosSharedWorkers || {};
-    let port;
+    let target, port;
     if (kind === 'shared') {
       if (!self.cosSharedWorkers[name]) {
-        self.cosSharedWorkers[name] = new SharedWorker(url, {name});
+        const options = {name};
+        if (allow !== null) options.allow = allow;
+        self.cosSharedWorkers[name] = new SharedWorker(url, options);
       }
-      port = self.cosSharedWorkers[name].port;
+      target = self.cosSharedWorkers[name];
+      port = target.port;
     } else {
-      port = new Worker(url);
+      target = port = new Worker(url);
     }
     return await new Promise((resolve, reject) => {
       port.onmessage = ({data}) => resolve(data);
-      port.onerror = () => reject(new Error(`${kind} worker failed to load`));
+      target.onerror = () => {
+        if (kind === 'shared') resolve({connected: false});
+        else reject(new Error(`${kind} worker failed to load`));
+      };
       port.postMessage({op: kind === 'nested' ? 'nested' : 'read', hash});
     });
-  }, [POLICY_WORKER_URL, kind, hash, name]);
+  }, [POLICY_WORKER_URL, kind, hash, name, allow]);
 }
 
 for (const kind of ['dedicated', 'shared', 'nested']) {
@@ -182,7 +201,9 @@ for (const kind of ['dedicated', 'shared', 'nested']) {
     assert_equals(result.name, 'NotFoundError',
       `a ${kind} worker owned by an allowed document is not policy-blocked`);
   }, `a ${kind} worker loaded from a URL in a policy-allowed document may use crossOriginStorage`);
+}
 
+for (const kind of ['dedicated', 'nested']) {
   promise_test(async t => {
     const {ctx} = await cosOpenRemoteContext(HTTPS_ORIGIN, {
       allow: null,
@@ -196,26 +217,48 @@ for (const kind of ['dedicated', 'shared', 'nested']) {
 }
 
 promise_test(async t => {
-  // Every owner must permit the feature, so a shared worker loses access as
-  // soon as a document that disallows it connects, including for requests
-  // that arrive through an allowed owner's port.
+  // A shared worker gets only what its creator delegates. Created without
+  // `allow`, it lacks the feature even in a document that permits it.
+  const {ctx} = await cosOpenRemoteContext(HTTPS_ORIGIN, {allow: null});
+  const result = await urlWorkerRead(ctx, 'shared', cosMissingHash(), {allow: null});
+  assert_false(result.ok);
+  assert_equals(result.name, 'NotAllowedError',
+    'a shared worker created without allow: \'cross-origin-storage\' is policy-blocked');
+}, 'a shared worker created without the allow option cannot use crossOriginStorage');
+
+promise_test(async t => {
+  // The escape this closes: a document whose own policy disables the feature
+  // cannot delegate it, so asking for it through `allow` fails the connection.
+  const {ctx} = await cosOpenRemoteContext(HTTPS_ORIGIN, {
+    allow: null,
+    pipeHeader: BLOCKED,
+  });
+  const result = await urlWorkerRead(ctx, 'shared', cosMissingHash());
+  assert_equals(result.connected, false,
+    'a document that disables cross-origin-storage cannot delegate it to a shared worker');
+}, 'a shared worker cannot escape a cross-origin-storage=() policy on the document that creates it');
+
+promise_test(async t => {
+  // A shared worker's policy is fixed when it is created. A document that
+  // cannot delegate the feature fails to connect, so it never becomes an owner
+  // and the worker keeps serving the document that created it.
   const name = token();
   const {ctx: allowedCtx} = await cosOpenRemoteContext(HTTPS_ORIGIN, {allow: null});
-  const before = await urlWorkerRead(allowedCtx, 'shared', cosMissingHash(), name);
+  const before = await urlWorkerRead(allowedCtx, 'shared', cosMissingHash(), {name});
   assert_equals(before.name, 'NotFoundError',
-    'with only an allowed owner, the shared worker is not policy-blocked');
+    'the shared worker created by an allowed document is not policy-blocked');
 
   const {ctx: blockedCtx} = await cosOpenRemoteContext(HTTPS_ORIGIN, {
     allow: null,
     pipeHeader: BLOCKED,
   });
-  const fromBlocked = await urlWorkerRead(blockedCtx, 'shared', cosMissingHash(), name);
-  assert_equals(fromBlocked.name, 'NotAllowedError',
-    'a request through the disallowing owner\'s port is blocked');
+  const fromBlocked = await urlWorkerRead(blockedCtx, 'shared', cosMissingHash(), {name});
+  assert_equals(fromBlocked.connected, false,
+    'a document that disables cross-origin-storage cannot connect with allow: \'cross-origin-storage\'');
 
-  const after = await urlWorkerRead(allowedCtx, 'shared', cosMissingHash(), name);
-  assert_equals(after.name, 'NotAllowedError',
-    'once a disallowing document owns the shared worker, every request is blocked');
-}, 'a shared worker owned by both an allowed and a disallowing document is blocked');
+  const after = await urlWorkerRead(allowedCtx, 'shared', cosMissingHash(), {name});
+  assert_equals(after.name, 'NotFoundError',
+    'a refused connection does not change the shared worker\'s policy');
+}, 'a document that disables cross-origin-storage cannot connect to a shared worker that has it');
 </script>
 </body>
