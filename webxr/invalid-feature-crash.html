@@ -1,0 +1,7 @@
+<!doctype html>
+<link rel="help" href="https://github.com/servo/servo/pull/">
+<script>
+var feature = {toString: function() { throw new Error("x"); }};
+navigator.xr.requestSession("inline", {optionalFeatures: [feature]});
+window.postMessage("x", {transfer: [{}]});
+</script>
