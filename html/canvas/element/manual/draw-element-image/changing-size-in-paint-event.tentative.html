@@ -9,7 +9,7 @@
 <canvas id="other_canvas" style="width: 100px; height: 100px;" width="50" height="200" content=drawable></canvas>
 
 <script src="/common/reftest-wait.js"></script>
-<script src="/html/canvas/resources/reftest-fail-on-error.js"></script>
+<script src="/html/canvas/resources/wait-for-canvas-paint.js"></script>
 <script>
   // Loop to update both canvas elements every requestAnimationFrame by
   // changing the size and painting red.
@@ -42,7 +42,7 @@
 
     canvas.requestPaint();
   }
-  canvas.requestPaint();
+  waitForCanvasPaint(canvas);
 
   window.onload = async () => {
     // Wait four frames, then end the test. The test should end with #canvas
