@@ -56,8 +56,8 @@ promise_test(async t => {
   // twenty origins below. The header is served on every generated wrapper of
   // this file, and storage-limits-sharedworker.tentative.https.html.headers
   // repeats it for the hand-written shared worker page. That covers the
-  // worker variants too: a worker's ceiling is the intersection of its owning
-  // documents' ceilings.
+  // worker variants too: a worker's ceiling is that of the document that
+  // created it.
   // https://wicg.github.io/cross-origin-storage/#allow-origin-header
   const content = cosUniqueContent('cumulative-origins-growth-never-errors');
   const value = await cosSha256Hex(content);

@@ -1,7 +1,7 @@
 // Worker used by allow-origin-header-workers.tentative.https.html. It stores
 // bytes on request, so that the write is made from a worker global and is
-// bounded by that worker's COS scope ceiling, which "obtain the COS scope
-// ceiling" derives from the worker's owner set.
+// bounded by that worker's COS scope ceiling, which is its creator's,
+// captured when the worker is created.
 //
 // Messages:
 //   {ping: true} -> {pong: true}
