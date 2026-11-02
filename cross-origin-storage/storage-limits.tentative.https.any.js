@@ -54,8 +54,10 @@ promise_test(async t => {
   // ceiling" drops every other origin, and an emptied list adds nothing at
   // all. storage-limits.tentative.https.any.js.headers therefore names all
   // twenty origins below. The header is served on every generated wrapper of
-  // this file, which covers the worker variants too: a worker's ceiling is
-  // the intersection of its owning documents' ceilings.
+  // this file, and storage-limits-sharedworker.tentative.https.html.headers
+  // repeats it for the hand-written shared worker page. That covers the
+  // worker variants too: a worker's ceiling is the intersection of its owning
+  // documents' ceilings.
   // https://wicg.github.io/cross-origin-storage/#allow-origin-header
   const content = cosUniqueContent('cumulative-origins-growth-never-errors');
   const value = await cosSha256Hex(content);
