@@ -36,6 +36,19 @@ async function cosOpenRemoteContext(origin, {allow = 'cross-origin-storage', pip
   return {ctx, iframe};
 }
 
+// Opens the remote executor page on `origin` as a new top-level window and
+// returns a RemoteContext in it, closing the window when `t` finishes. Reads
+// from it run under `origin`'s site as the top-level site, which is how a test
+// reaches a COS partition other than this document's.
+async function cosOpenTopLevel(t, origin) {
+  const uuid = token();
+  window.open(remoteExecutorUrl(uuid, {host: new URL(origin).host}), '_blank');
+  const ctx = new RemoteContext(uuid);
+  await ctx.execute_script(() => true);
+  t.add_cleanup(() => ctx.execute_script(() => window.close()).catch(() => {}));
+  return ctx;
+}
+
 // Runs `navigator.crossOriginStorage.getFileHandle(hash)` inside a
 // RemoteContext and returns a plain, serializable descriptor, since only a
 // TypeError keeps its name across the RemoteContext boundary (everything else
@@ -79,13 +92,14 @@ async function cosRemoteReadDigest(ctx, hash) {
 // that a test does not pass only because an earlier test in the same file
 // already stored or read through the same origin.
 //
-// A user agent may also bound cross-site lookups for the "*" grant, for
-// example with a small budget of lookups keyed on the top-level site and
-// shared by every frame on the page, which persists across reloads for a time
-// window (https://wicg.github.io/cross-origin-storage/#availability-gating).
-// Such a budget is a non-normative example mitigation. It only ever applies to
-// reads that qualify through the global grant alone, and since it is keyed on
-// the test page's top-level site, the pools do not divide it.
+// A user agent may also bound cross-site lookups, for example with a small
+// budget of lookups keyed on the top-level site and shared by every frame on
+// the page, which persists across reloads for a time window
+// (https://wicg.github.io/cross-origin-storage/#availability-gating). Such a
+// budget is a non-normative example mitigation. It leaves uncharged only the
+// lookups answered by a grant written under the reader's own top-level site,
+// and since it is keyed on the test page's top-level site, the pools do not
+// divide it.
 function cosOriginPools() {
   const info = get_host_info();
   const port2 = info.HTTPS_PORT2;
@@ -160,7 +174,10 @@ function cosAssertSomeDisclosureObserved() {
 // through the storing origins, the explicit origins list, or the same-site set
 // of either: "determine COS disclosure" returns the entry for those before it
 // reaches the Public Hash List gate or GREASE'ing, and a user agent must not
-// GREASE them (https://wicg.github.io/cross-origin-storage/#greaseing).
+// GREASE them (https://wicg.github.io/cross-origin-storage/#greaseing). A
+// reader that qualifies through a list written under another top-level site
+// is charged against a cross-site lookup budget, so keep the number of such
+// reads in a file small.
 function cosAssertDisclosed(result, expectedText, description) {
   assert_true(result.ok,
     `${description}: expected the read to be disclosed, got ${result.name}: ${result.message}`);

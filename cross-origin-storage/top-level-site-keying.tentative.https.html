@@ -34,16 +34,6 @@
 
 const {HTTPS_NOTSAMESITE_ORIGIN, HTTPS_OTHER_NOTSAMESITE_ORIGIN} = get_host_info();
 
-// Opens `origin` as a new top-level window and returns a RemoteContext in it.
-async function openTopLevel(t, origin) {
-  const uuid = token();
-  window.open(remoteExecutorUrl(uuid, {host: new URL(origin).host}), '_blank');
-  const ctx = new RemoteContext(uuid);
-  await ctx.execute_script(() => true);
-  t.add_cleanup(() => ctx.execute_script(() => window.close()).catch(() => {}));
-  return ctx;
-}
-
 async function uniqueHash(label) {
   const content = cosUniqueContent(label);
   return {content, hash: cosHash(await cosSha256Hex(content))};
@@ -69,14 +59,14 @@ promise_test(async t => {
   const {ctx: frame} = await cosOpenRemoteContext(HTTPS_NOTSAMESITE_ORIGIN);
   await storeIn(frame, hash, content);
 
-  const topLevel = await openTopLevel(t, HTTPS_NOTSAMESITE_ORIGIN);
+  const topLevel = await cosOpenTopLevel(t, HTTPS_NOTSAMESITE_ORIGIN);
   cosAssertNotDisclosed(await cosRemoteRead(topLevel, hash),
     'the storing origin, top-level on its own site, reading what its frame wrote here');
 }, 'what a cross-site frame wrote is not readable by the same origin under another top-level site');
 
 promise_test(async t => {
   const {hash, content} = await uniqueHash('top-level-write-not-readable-in-frame');
-  const topLevel = await openTopLevel(t, HTTPS_NOTSAMESITE_ORIGIN);
+  const topLevel = await cosOpenTopLevel(t, HTTPS_NOTSAMESITE_ORIGIN);
   await storeIn(topLevel, hash, content);
   cosAssertDisclosed(await cosRemoteRead(topLevel, hash), content,
     'the storing origin, top-level, reading its own write');
@@ -95,18 +85,21 @@ promise_test(async t => {
   cosAssertDisclosed(await cosRemoteRead(sibling, hash), content,
     'an origin same site with the storing origin, under the same top-level site');
 
-  const topLevel = await openTopLevel(t, HTTPS_OTHER_NOTSAMESITE_ORIGIN);
+  const topLevel = await cosOpenTopLevel(t, HTTPS_OTHER_NOTSAMESITE_ORIGIN);
   cosAssertNotDisclosed(await cosRemoteRead(topLevel, hash),
     'an origin same site with the storing origin, under another top-level site');
 }, 'the same-site baseline is keyed to the top-level site of the write');
 
 promise_test(async t => {
   // A first-party list admits the listed origins first-party anywhere, and
-  // also under the writer's own top-level site.
+  // also under the writer's own top-level site. The top-level read is charged
+  // against a cross-site lookup budget, if the user agent applies one, while
+  // the framed read is not; list-grant-budget.tentative.optional.https.html
+  // covers that split.
   const {hash, content} = await uniqueHash('first-party-list');
   await cosStore(content, {origins: [HTTPS_NOTSAMESITE_ORIGIN]});
 
-  const topLevel = await openTopLevel(t, HTTPS_NOTSAMESITE_ORIGIN);
+  const topLevel = await cosOpenTopLevel(t, HTTPS_NOTSAMESITE_ORIGIN);
   cosAssertDisclosed(await cosRemoteRead(topLevel, hash), content,
     'the listed origin, top-level on its own site');
   const {ctx: frame} = await cosOpenRemoteContext(HTTPS_NOTSAMESITE_ORIGIN);
@@ -123,7 +116,7 @@ promise_test(async t => {
     {pipeHeader: cosAllowOriginPipe(HTTPS_NOTSAMESITE_ORIGIN)});
   await storeIn(frame, hash, content, {origins: [HTTPS_NOTSAMESITE_ORIGIN]});
 
-  const topLevel = await openTopLevel(t, HTTPS_NOTSAMESITE_ORIGIN);
+  const topLevel = await cosOpenTopLevel(t, HTTPS_NOTSAMESITE_ORIGIN);
   cosAssertNotDisclosed(await cosRemoteRead(topLevel, hash),
     'the origin a cross-site frame listed, top-level on its own site');
 }, 'an origins list written from a cross-site frame only applies under that frame\'s top-level site');
