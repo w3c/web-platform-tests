@@ -15,13 +15,38 @@
 </style>
 <div id=foo>XXX</div>
 <script>
-var t1 = performance.timing.responseStart;
+const t1 = performance.getEntriesByType("navigation")[0].responseStart;
 
 async_test(function(t) {
-window.addEventListener("load", t.step_func_done(function() {
-    var t2 = Date.now();
-    var diff = t2 - t1;
+  window.addEventListener("load", t.step_func_done(function() {
+    const t2 = performance.now();
+    const diff = t2 - t1;
     assert_greater_than(diff, 1000, "ms after style");
   }));
 }, "load waits for used @font-face");
+
+async_test(function(t) {
+  // Layout uses the font, so this starts the load before reading document.fonts.ready.
+  document.querySelector("#foo").offsetWidth;
+  document.fonts.ready.then(t.step_func_done(function() {
+    const t2 = performance.now();
+    const diff = t2 - t1;
+    assert_greater_than(diff, 1000, "ms after style");
+  }));
+}, "document.fonts.ready waits for used @font-face");
+
+async_test(function(t) {
+  const order = [];
+  document.querySelector("#foo").offsetWidth;
+  const ready = document.fonts.ready.then(() => order.push("ready"));
+  const loaded = new Promise(resolve => {
+    window.addEventListener("load", () => {
+      order.push("load");
+      resolve();
+    });
+  });
+  Promise.all([ready, loaded]).then(t.step_func_done(() => {
+    assert_array_equals(order, ["load", "ready"]);
+  }));
+}, "document.fonts.ready resolves after the load event");
 </script>
