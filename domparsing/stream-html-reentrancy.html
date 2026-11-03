@@ -510,6 +510,6 @@
                  "<body> attributes must not be merged after abort in table text");
     await failOnTimeout(abortPromise);
     await promise_rejects_exactly(t, "aborted-before-body-reprocess", writer.closed);
-  }, "documentElement.streamHTMLUnsafe: abort() from a foster-parented custom element reaction in table text prevents reprocessing <body> attributes");
+  }, "documentElement.streamHTMLUnsafe: abort() from a foster-parented custom element reaction in table text does not merge <body> attributes");
 </script>
 </body>
