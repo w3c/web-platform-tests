@@ -221,9 +221,10 @@ promise_test(async t => {
 promise_test(async t => {
   const srcUrl = imageUrl("src-default");
   const highUrl = imageUrl("srcset-high");
+  const highDensity = Math.max(2, 2 * dpr);
   const selected = await selectImg(t, {
     src: srcUrl,
-    srcset: `${highUrl} ${2 * dpr}x`,
+    srcset: `${highUrl} ${highDensity}x`,
   });
   assert_equals(selected, dpr <= 1 ? srcUrl : highUrl);
 }, "src with higher-density srcset candidate: selects between 1x src and higher srcset density based on DPR");
@@ -270,4 +271,49 @@ promise_test(async t => {
   }, "zoom: 2");
   assert_equals(selected, exact);
 }, "CSS zoom on the img element itself does not scale x-descriptor target density");
+
+promise_test(async t => {
+  const zero = imageUrl("zero-x");
+  const exact = imageUrl("zero-exact");
+  const selected = await selectImg(t, {
+    srcset: `${zero} 0x, ${exact} ${1 * dpr}x`,
+  });
+  assert_equals(selected, exact);
+}, "0x descriptor is valid and skipped when higher candidate >= devicePixelRatio exists");
+
+promise_test(async t => {
+  const onlyZero = imageUrl("only-zero-x");
+  const selected = await selectImg(t, {
+    srcset: `${onlyZero} 0x`,
+  });
+  assert_equals(selected, onlyZero);
+}, "sole 0x descriptor is selected as last candidate when below devicePixelRatio");
+
+promise_test(async t => {
+  const uncachedMatch = imageUrl("normative-1x");
+  const cachedMid = imageUrl("normative-cached-2x");
+  const uncachedTop = imageUrl("normative-uncached-3x");
+
+  await selectImg(t, { src: cachedMid });
+
+  const selected = await selectImg(t, {
+    srcset: `${uncachedMatch} ${1 * dpr}x, ${cachedMid} ${2 * dpr}x, ${uncachedTop} ${3 * dpr}x`,
+  });
+  assert_in_array(selected, [uncachedMatch, cachedMid]);
+}, "cached mid-density candidate never causes selection of higher uncached candidate");
+
+promise_test(async t => {
+  const exact = imageUrl("replaceable-exact");
+  const overridden = imageUrl("replaceable-overridden");
+  t.add_cleanup(() => {
+    delete window.devicePixelRatio;
+  });
+  window.devicePixelRatio = 100 * dpr;
+  assert_equals(window.devicePixelRatio, 100 * dpr);
+
+  const selected = await selectImg(t, {
+    srcset: `${exact} ${1 * dpr}x, ${overridden} ${100 * dpr}x`,
+  });
+  assert_equals(selected, exact);
+}, "shadowing replaceable window.devicePixelRatio does not affect image source selection");
 </script>

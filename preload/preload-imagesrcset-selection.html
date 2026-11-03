@@ -127,5 +127,45 @@ promise_test(async t => {
   await preloadAndVerify(t, { href: marker }, marker, [marker]);
   assert_equals(performance.getEntriesByType("resource").length, beforeEntries + 1);
 }, "preload with empty imagesrcset and no href does not initiate a fetch");
+
+promise_test(async t => {
+  verifyPreloadAndRTSupport();
+  await windowLoaded;
+  const bad = squareUrl("invalid-0w");
+  const beforeEntries = performance.getEntriesByType("resource").length;
+  const link = document.createElement("link");
+  t.add_cleanup(() => link.remove());
+  link.rel = "preload";
+  link.as = "image";
+  link.setAttribute("imagesrcset", `${bad} 0w`);
+  document.body.appendChild(link);
+
+  const marker = squareUrl("invalid-sentinel");
+  await preloadAndVerify(t, { href: marker }, marker, [bad, marker]);
+  assert_equals(performance.getEntriesByType("resource").length, beforeEntries + 1);
+}, "preload with all-invalid imagesrcset candidates and no href does not initiate a fetch");
+
+promise_test(async t => {
+  const bad = squareUrl("invalid-with-href-0w");
+  const fallback = squareUrl("invalid-with-href-fallback");
+  await preloadAndVerify(t, {
+    href: fallback,
+    imagesrcset: `${bad} 0w`,
+  }, fallback, [bad, fallback]);
+}, "preload with all-invalid imagesrcset candidates falls back to href as 1x default source");
+
+promise_test(async t => {
+  const exact = squareUrl("replaceable-exact");
+  const overridden = squareUrl("replaceable-overridden");
+  t.add_cleanup(() => {
+    delete window.devicePixelRatio;
+  });
+  window.devicePixelRatio = 100 * dpr;
+  assert_equals(window.devicePixelRatio, 100 * dpr);
+
+  await preloadAndVerify(t, {
+    imagesrcset: `${exact} ${1 * dpr}x, ${overridden} ${100 * dpr}x`,
+  }, exact, [exact, overridden]);
+}, "shadowing replaceable window.devicePixelRatio does not affect preload imagesrcset selection");
 </script>
 </body>
