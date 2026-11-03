@@ -1,0 +1,118 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Disabled reactions for custom controls across tree changes</title>
+<link rel="help" href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#concept-fe-disabled">
+<link rel="help" href="https://html.spec.whatwg.org/multipage/custom-elements.html#custom-element-reactions">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<body>
+<script>
+"use strict";
+
+class DisabledControl extends HTMLElement {
+  static formAssociated = true;
+  constructor() {
+    super();
+    this.disabledHistory = [];
+  }
+  formDisabledCallback(disabled) {
+    this.disabledHistory.push(disabled);
+  }
+}
+customElements.define("disabled-control", DisabledControl);
+
+test(() => {
+  const fieldset = document.createElement("fieldset");
+  fieldset.disabled = true;
+  const subtree = document.createElement("div");
+  const control = new DisabledControl();
+  subtree.append(control);
+  fieldset.append(subtree);
+  assert_array_equals(control.disabledHistory, [true]);
+
+  const fragment = document.createDocumentFragment();
+  fragment.append(fieldset);
+  fieldset.remove();
+  assert_array_equals(control.disabledHistory, [true], "Keeping the disabled ancestor does not change disabledness");
+  fragment.append(subtree);
+  assert_array_equals(control.disabledHistory, [true, false], "Removing the disabled ancestor enables a descendant");
+  fieldset.append(subtree);
+  assert_array_equals(control.disabledHistory, [true, false, true]);
+}, "Disabled reactions follow subtree ancestry even in detached trees and without attached internals");
+
+test(() => {
+  const outer = document.createElement("fieldset");
+  const inner = document.createElement("fieldset");
+  const first = document.createElement("legend");
+  const second = document.createElement("legend");
+  const control = new DisabledControl();
+  first.append(control);
+  inner.append(first, second);
+  outer.append(inner);
+  inner.disabled = true;
+  assert_array_equals(control.disabledHistory, []);
+
+  inner.prepend(second);
+  assert_array_equals(control.disabledHistory, [true]);
+  outer.disabled = true;
+  second.remove();
+  assert_array_equals(control.disabledHistory, [true], "An outer fieldset still disables the first legend's control");
+  outer.disabled = false;
+  assert_array_equals(control.disabledHistory, [true, false]);
+}, "Reordering legends and toggling nested fieldsets only notify effective disabledness changes");
+
+test(() => {
+  const fieldset = document.createElement("fieldset");
+  const host = document.createElement("div");
+  const shadow = host.attachShadow({ mode: "open" });
+  const slot = document.createElement("slot");
+  const shadowControl = new DisabledControl();
+  const slottedControl = new DisabledControl();
+  shadow.append(slot, shadowControl);
+  host.append(slottedControl);
+  fieldset.append(host);
+
+  fieldset.disabled = true;
+  assert_array_equals(shadowControl.disabledHistory, []);
+  assert_array_equals(slottedControl.disabledHistory, [true]);
+  shadow.append(slottedControl);
+  assert_array_equals(slottedControl.disabledHistory, [true, false]);
+  fieldset.disabled = false;
+  assert_array_equals(shadowControl.disabledHistory, []);
+  assert_array_equals(slottedControl.disabledHistory, [true, false]);
+}, "Disabled fieldsets affect slotted controls but not shadow-tree controls");
+
+test(() => {
+  class ReentrantControl extends DisabledControl {
+    formDisabledCallback(disabled) {
+      super.formDisabledCallback(disabled);
+      if (disabled) {
+        this.removeAttribute("disabled");
+      }
+    }
+  }
+  customElements.define("reentrant-disabled-control", ReentrantControl);
+  const control = new ReentrantControl();
+  control.setAttribute("disabled", "");
+  control.setAttribute("disabled", "");
+  assert_array_equals(control.disabledHistory, [true, false, true, false]);
+}, "A disabled reaction can re-enable the control without suppressing later transitions");
+
+test(() => {
+  const control = new DisabledControl();
+  const fieldset = document.createElementNS("http://www.w3.org/2000/svg", "fieldset");
+  fieldset.setAttribute("disabled", "");
+  fieldset.append(control);
+  assert_false(control.matches(":disabled"));
+  assert_array_equals(control.disabledHistory, []);
+
+  control.setAttributeNS("urn:test", "disabled", "");
+  assert_false(control.matches(":disabled"));
+  assert_array_equals(control.disabledHistory, []);
+  control.setAttributeNS(null, "disabled", "");
+  control.setAttributeNS(null, "disabled", "disabled");
+  assert_array_equals(control.disabledHistory, [true]);
+  control.removeAttributeNS(null, "disabled");
+  assert_array_equals(control.disabledHistory, [true, false]);
+}, "Disabledness ignores non-HTML fieldsets, namespaced attributes, and changes between present attribute values");
+</script>

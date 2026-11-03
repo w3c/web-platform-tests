@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Form-associated custom element upgrade reaction ordering</title>
+<link rel="help" href="https://html.spec.whatwg.org/multipage/custom-elements.html#concept-upgrade-an-element">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<body>
+<script type="module">
+import { FormControl, fixture } from "./resources/mutation-reactions.mjs";
+
+for (const connected of [false, true]) {
+  for (const disabledBy of ["neither", "attribute", "fieldset"]) {
+    test(t => {
+      const root = fixture(t, connected);
+      const form = document.createElement("form");
+      const fieldset = document.createElement("fieldset");
+      const name = `upgrade-${connected}-${disabledBy}`;
+      const control = document.createElement(name);
+      if (disabledBy === "attribute") {
+        control.setAttribute("disabled", "");
+      }
+      fieldset.disabled = disabledBy === "fieldset";
+      fieldset.append(control);
+      form.append(fieldset);
+      root.append(form);
+      customElements.define(name, class extends FormControl {});
+      customElements.upgrade(root);
+
+      assert_equals(control.elementInternals.form, form);
+      assert_array_equals(control.reactions, [
+        ...(disabledBy === "attribute" ? ["attribute", "disabled", null, ""] : []),
+        ...(connected ? ["connected"] : []),
+        "associated", form,
+        ...(disabledBy === "neither" ? [] : ["disabled", true])
+      ]);
+      if (disabledBy !== "neither") {
+        control.clear();
+        // Upgrading initializes the state used to suppress redundant callbacks.
+        control.setAttribute("disabled", "");
+        assert_array_equals(control.reactions,
+          ["attribute", "disabled", disabledBy === "attribute" ? "" : null, ""]);
+      }
+    }, `${connected ? "Connected" : "Detached"} upgrade, disabled by ${disabledBy}`);
+  }
+}
+</script>

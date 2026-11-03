@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Ordering and suppression of form-associated custom element attribute reactions</title>
+<link rel="help" href="https://github.com/whatwg/html/issues/12169">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<body>
+<script type="module">
+import { FormControl, fixture } from "./resources/mutation-reactions.mjs";
+
+test(t => {
+  const root = fixture(t);
+  const first = document.createElement("form");
+  const second = document.createElement("form");
+  second.id = "attribute-form";
+  const control = new FormControl();
+  first.append(control);
+  root.append(first, second);
+  control.clear();
+
+  control.setAttribute("form", second.id);
+  assert_array_equals(control.reactions,
+    ["attribute", "form", null, second.id, "associated", second]);
+  control.clear();
+  control.setAttribute("form", second.id);
+  assert_array_equals(control.reactions, ["attribute", "form", second.id, second.id]);
+  control.clear();
+  control.removeAttribute("form");
+  assert_array_equals(control.reactions,
+    ["attribute", "form", second.id, null, "associated", first]);
+}, "Form attribute reactions precede association reactions, with no redundant association for the same value");
+
+test(() => {
+  const control = new FormControl();
+  control.setAttribute("disabled", "");
+  assert_array_equals(control.reactions, ["attribute", "disabled", null, "", "disabled", true]);
+  control.clear();
+  control.setAttribute("disabled", "disabled");
+  assert_array_equals(control.reactions, ["attribute", "disabled", "", "disabled"]);
+  control.clear();
+  control.removeAttribute("disabled");
+  assert_array_equals(control.reactions,
+    ["attribute", "disabled", "disabled", null, "disabled", false]);
+}, "Disabled attribute reactions precede effective disabledness reactions");
+
+test(t => {
+  const root = fixture(t);
+  const fieldset = document.createElement("fieldset");
+  fieldset.disabled = true;
+  const control = new FormControl();
+  fieldset.append(control);
+  root.append(fieldset);
+  control.clear();
+
+  control.setAttribute("disabled", "");
+  control.removeAttribute("disabled");
+  assert_array_equals(control.reactions,
+    ["attribute", "disabled", null, "", "attribute", "disabled", "", null]);
+}, "Observed disabled attribute changes still notify when an ancestor keeps the control disabled");
+
+test(t => {
+  const root = fixture(t);
+  const form = document.createElement("form");
+  const control = new FormControl();
+  form.append(control);
+  root.append(form);
+  control.clear();
+
+  control.setAttributeNS("urn:test", "form", "missing-form");
+  control.setAttributeNS("urn:test", "disabled", "");
+  assert_equals(control.elementInternals.form, form);
+  assert_false(control.matches(":disabled"));
+  assert_array_equals(control.reactions, [
+    "attribute", "form", null, "missing-form",
+    "attribute", "disabled", null, ""
+  ]);
+}, "Namespaced attributes notify observers but do not change form ownership or disabledness");
+</script>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Form-associated custom element reactions to state-preserving moves</title>
+<link rel="help" href="https://github.com/whatwg/html/issues/12169">
+<link rel="help" href="https://html.spec.whatwg.org/multipage/infrastructure.html#dom-trees">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<body>
+<script type="module">
+import { FormControl, fixture } from "./resources/mutation-reactions.mjs";
+
+const ownerNames = ["form A", "form B", "no form"];
+for (const connected of [false, true]) {
+  for (const subtree of [false, true]) {
+    for (const [from, to] of [[0, 0], [0, 1], [0, 2], [2, 0], [2, 2]]) {
+      test(t => {
+        const root = fixture(t, connected);
+        const parents = [document.createElement("form"), document.createElement("form"),
+          document.createElement("div")];
+        root.append(...parents);
+        const control = new FormControl();
+        const node = subtree ? document.createElement("div") : control;
+        if (subtree) {
+          node.append(control);
+        }
+        parents[from].append(node, document.createElement("span"));
+        const oldOwner = from === 2 ? null : parents[from];
+        const newOwner = to === 2 ? null : parents[to];
+        assert_equals(control.elementInternals.form, oldOwner);
+        control.clear();
+
+        parents[to].moveBefore(node, null);
+        assert_equals(control.elementInternals.form, newOwner);
+        assert_array_equals(control.reactions, [
+          ...(connected ? ["moved"] : []),
+          ...(oldOwner === newOwner ? [] : ["associated", newOwner])
+        ]);
+        for (const state of control.states) {
+          assert_equals(state.form, newOwner, "Reactions see the final owner");
+          assert_equals(state.connected, connected);
+        }
+      }, `${connected ? "Connected" : "Detached"} move of ${subtree ? "an ancestor" : "the control"}: ${ownerNames[from]} to ${ownerNames[to]}`);
+    }
+
+    for (const before of [false, true]) {
+      for (const after of [false, true]) {
+        for (const ownDisabled of [false, true]) {
+          test(t => {
+            const root = fixture(t, connected);
+            const form = document.createElement("form");
+            const first = document.createElement("fieldset");
+            const second = document.createElement("fieldset");
+            first.disabled = before;
+            second.disabled = after;
+            form.append(first, second);
+            root.append(form);
+            const control = new FormControl();
+            control.toggleAttribute("disabled", ownDisabled);
+            const node = subtree ? document.createElement("div") : control;
+            if (subtree) {
+              node.append(control);
+            }
+            first.append(node);
+            control.clear();
+
+            second.moveBefore(node, null);
+            assert_equals(control.elementInternals.form, form);
+            assert_equals(control.matches(":disabled"), ownDisabled || after);
+            assert_array_equals(control.reactions, [
+              ...(connected ? ["moved"] : []),
+              ...(!ownDisabled && before !== after ? ["disabled", after] : [])
+            ]);
+            for (const state of control.states) {
+              assert_equals(state.form, form);
+              assert_equals(state.disabled, ownDisabled || after);
+            }
+          }, `${connected ? "Connected" : "Detached"} move of ${subtree ? "an ancestor" : "the control"}: fieldset disabled ${before} to ${after}, own disabled ${ownDisabled}`);
+        }
+      }
+    }
+  }
+}
+
+test(t => {
+  const root = fixture(t);
+  const first = document.createElement("form");
+  const second = document.createElement("form");
+  const fieldset = document.createElement("fieldset");
+  fieldset.disabled = true;
+  second.append(fieldset);
+  root.append(first, second);
+  const control = new FormControl();
+  first.append(control);
+  control.clear();
+
+  fieldset.moveBefore(control, null);
+  assert_array_equals(control.reactions, ["moved", "associated", second, "disabled", true]);
+}, "A move that changes both owner and disabledness reports association before disabledness");
+
+test(t => {
+  const root = fixture(t);
+  const form = document.createElement("form");
+  form.id = "explicit-form";
+  const otherForm = document.createElement("form");
+  root.append(form, otherForm);
+  const control = new FormControl();
+  control.setAttribute("form", form.id);
+  form.append(control);
+  control.clear();
+
+  otherForm.moveBefore(control, null);
+  assert_equals(control.elementInternals.form, form);
+  assert_array_equals(control.reactions, ["moved"]);
+}, "An explicit form owner is preserved when the control moves under another form");
+
+test(t => {
+  const root = fixture(t);
+  const form = document.createElement("form");
+  const fieldset = document.createElement("fieldset");
+  fieldset.disabled = true;
+  const control = new FormControl();
+  fieldset.append(control);
+  form.append(fieldset);
+  root.append(form, document.createElement("span"));
+  control.clear();
+
+  root.moveBefore(form, null);
+  assert_equals(control.elementInternals.form, form);
+  assert_true(control.matches(":disabled"));
+  assert_array_equals(control.reactions, ["moved"]);
+}, "Moving a whole form retains the owner and disabledness of its descendants");
+
+test(t => {
+  const root = fixture(t);
+  const form = document.createElement("form");
+  const fieldset = document.createElement("fieldset");
+  fieldset.disabled = true;
+  const host = document.createElement("div");
+  const shadow = host.attachShadow({ mode: "open" });
+  root.append(form, host);
+  form.append(fieldset);
+  const control = new FormControl();
+  fieldset.append(control);
+  control.clear();
+
+  shadow.moveBefore(control, null);
+  assert_equals(control.elementInternals.form, null);
+  assert_false(control.matches(":disabled"));
+  assert_array_equals(control.reactions, ["moved", "associated", null, "disabled", false]);
+  control.clear();
+  fieldset.moveBefore(control, null);
+  assert_array_equals(control.reactions, ["moved", "associated", form, "disabled", true]);
+}, "Moving across a shadow boundary recomputes the owner and disabledness without disconnecting");
+
+test(t => {
+  const root = fixture(t);
+  const host = document.createElement("div");
+  const shadow = host.attachShadow({ mode: "open" });
+  const form = document.createElement("form");
+  const control = new FormControl();
+  form.append(control);
+  shadow.append(form);
+  root.append(host, document.createElement("span"));
+  control.clear();
+
+  root.moveBefore(host, null);
+  assert_array_equals(control.reactions, ["moved"]);
+  assert_equals(control.elementInternals.form, form);
+}, "Moving a shadow host does not disassociate controls in its shadow tree");
+
+for (const retainOuterDisabled of [false, true]) {
+  test(t => {
+    const root = fixture(t);
+    const outer = document.createElement("fieldset");
+    outer.disabled = retainOuterDisabled;
+    const fieldset = document.createElement("fieldset");
+    fieldset.disabled = true;
+    const first = document.createElement("legend");
+    const second = document.createElement("legend");
+    const firstControl = new FormControl();
+    const secondControl = new FormControl();
+    first.append(firstControl);
+    second.append(secondControl);
+    fieldset.append(first, second);
+    outer.append(fieldset);
+    root.append(outer);
+    firstControl.clear();
+    secondControl.clear();
+
+    fieldset.moveBefore(second, first);
+    assert_array_equals(firstControl.reactions, retainOuterDisabled ? [] : ["disabled", true]);
+    assert_array_equals(secondControl.reactions,
+      retainOuterDisabled ? ["moved"] : ["moved", "disabled", false]);
+    assert_true(firstControl.matches(":disabled"));
+    assert_equals(secondControl.matches(":disabled"), retainOuterDisabled);
+  }, `Moving a legend updates moved and stationary controls, outer fieldset disabled ${retainOuterDisabled}`);
+}
+
+test(t => {
+  const root = fixture(t);
+  const fieldsets = [document.createElement("fieldset"), document.createElement("fieldset")];
+  const legends = [document.createElement("legend"), document.createElement("legend"),
+    document.createElement("legend")];
+  const controls = legends.map(legend => {
+    const control = new FormControl();
+    legend.append(control);
+    return control;
+  });
+  for (const fieldset of fieldsets) {
+    fieldset.disabled = true;
+  }
+  fieldsets[0].append(legends[0], legends[1]);
+  fieldsets[1].append(legends[2]);
+  root.append(...fieldsets);
+  controls.forEach(control => control.clear());
+
+  fieldsets[1].moveBefore(legends[0], legends[2]);
+  assert_array_equals(controls[0].reactions, ["moved"]);
+  assert_array_equals(controls[1].reactions, ["disabled", false]);
+  assert_array_equals(controls[2].reactions, ["disabled", true]);
+}, "Moving a first legend between fieldsets updates both fieldsets without transiently disabling its control");
+
+test(t => {
+  const root = fixture(t);
+  const forms = [document.createElement("form"), document.createElement("form")];
+  const fieldsets = forms.map(form => {
+    const fieldset = document.createElement("fieldset");
+    fieldset.disabled = true;
+    form.append(fieldset);
+    return fieldset;
+  });
+  const legend = document.createElement("legend");
+  const control = new FormControl();
+  legend.append(control);
+  fieldsets[0].append(legend);
+  fieldsets[1].append(document.createElement("legend"));
+  root.append(...forms);
+  control.clear();
+
+  fieldsets[1].moveBefore(legend, null);
+  assert_array_equals(control.reactions, ["moved", "associated", forms[1], "disabled", true]);
+  control.clear();
+  fieldsets[0].moveBefore(legend, null);
+  assert_array_equals(control.reactions, ["moved", "associated", forms[0], "disabled", false]);
+}, "A moved legend's controls report association before disabledness when both change");
+
+test(t => {
+  class FallbackControl extends FormControl {}
+  Object.defineProperty(FallbackControl.prototype, "connectedMoveCallback", { value: undefined });
+  customElements.define("fallback-control", FallbackControl);
+  const root = fixture(t);
+  const form = document.createElement("form");
+  const control = new FallbackControl();
+  form.append(control, document.createElement("span"));
+  root.append(form);
+  control.clear();
+
+  form.moveBefore(control, null);
+  assert_array_equals(control.reactions, ["disconnected", "connected"]);
+  assert_equals(control.elementInternals.form, form);
+}, "The default move callback pair does not cause form disassociation");
+</script>

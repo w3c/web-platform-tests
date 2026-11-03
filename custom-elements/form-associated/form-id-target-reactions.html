@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Form reactions to ID target mutations</title>
+<link rel="help" href="https://github.com/whatwg/html/issues/12169">
+<link rel="help" href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#association-of-controls-and-forms">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<body>
+<script type="module">
+import { FormControl, fixture } from "./resources/mutation-reactions.mjs";
+
+for (const inShadow of [false, true]) {
+  test(t => {
+    const host = fixture(t);
+    const root = inShadow ? host.attachShadow({ mode: "open" }) : host;
+    const control = new FormControl();
+    control.setAttribute("form", "id-target");
+    root.append(control);
+    control.clear();
+    const form = document.createElement("form");
+    form.id = "id-target";
+
+    root.append(form);
+    assert_equals(control.elementInternals.form, form);
+    assert_array_equals(control.reactions, ["associated", form], "Insert the target form");
+    control.clear();
+    const blocker = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    blocker.id = form.id;
+    root.prepend(blocker);
+    assert_equals(control.elementInternals.form, null);
+    assert_array_equals(control.reactions, ["associated", null], "Insert an earlier non-form ID target");
+    control.clear();
+    blocker.id = "other-id";
+    assert_equals(control.elementInternals.form, form);
+    assert_array_equals(control.reactions, ["associated", form], "Change the non-form target's ID away");
+    control.clear();
+    blocker.id = form.id;
+    assert_array_equals(control.reactions, ["associated", null], "Change the non-form target's ID back");
+    control.clear();
+    blocker.remove();
+    assert_array_equals(control.reactions, ["associated", form], "Remove the non-form ID target");
+    control.clear();
+    form.remove();
+    assert_equals(control.elementInternals.form, null);
+    assert_array_equals(control.reactions, ["associated", null], "Remove the target form");
+  }, `ID target insertion, SVG ID changes, and removal in a ${inShadow ? "shadow" : "document"} tree`);
+}
+
+test(t => {
+  const root = fixture(t);
+  const first = document.createElement("form");
+  const second = document.createElement("form");
+  first.id = second.id = "moving-id-target";
+  const control = new FormControl();
+  control.setAttribute("form", first.id);
+  root.append(first, second, control);
+  control.clear();
+
+  root.moveBefore(second, first);
+  assert_equals(control.elementInternals.form, second);
+  assert_array_equals(control.reactions, ["associated", second]);
+}, "Moving a competing ID target changes a stationary control's owner without an intermediate null");
+
+test(t => {
+  const root = fixture(t);
+  const hosts = [document.createElement("div"), document.createElement("div")];
+  const shadows = hosts.map(host => host.attachShadow({ mode: "open" }));
+  root.append(...hosts);
+  const forms = [document.createElement("form"), document.createElement("form")];
+  const controls = [new FormControl(), new FormControl()];
+  for (let i = 0; i < 2; ++i) {
+    forms[i].id = "cross-tree-target";
+    controls[i].setAttribute("form", forms[i].id);
+    shadows[i].append(forms[i], controls[i]);
+    assert_equals(controls[i].elementInternals.form, forms[i]);
+    controls[i].clear();
+  }
+
+  shadows[1].moveBefore(forms[0], forms[1]);
+  assert_equals(controls[0].elementInternals.form, null);
+  assert_array_equals(controls[0].reactions, ["associated", null]);
+  assert_equals(controls[1].elementInternals.form, forms[0]);
+  assert_array_equals(controls[1].reactions, ["associated", forms[0]]);
+}, "Moving an ID target across shadow roots updates controls in both trees");
+</script>

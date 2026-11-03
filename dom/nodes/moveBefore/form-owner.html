@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>State-preserving moves update native controls' form owners</title>
+<link rel="help" href="https://html.spec.whatwg.org/multipage/infrastructure.html#dom-trees">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<body>
+<script>
+for (const tag of ["button", "fieldset", "input", "object", "output", "select", "textarea"]) {
+  for (const connected of [false, true]) {
+    for (const subtree of [false, true]) {
+      test(t => {
+        const root = document.createElement("div");
+        if (connected) {
+          document.body.append(root);
+        }
+        t.add_cleanup(() => root.remove());
+        const first = document.createElement("form");
+        const second = document.createElement("form");
+        root.append(first, second);
+        const control = document.createElement(tag);
+        const node = subtree ? document.createElement("div") : control;
+        if (subtree) {
+          node.append(control);
+        }
+        first.append(node);
+        assert_equals(control.form, first);
+
+        second.moveBefore(node, null);
+        assert_equals(control.form, second, "Moving to a different ancestor form");
+        root.moveBefore(node, null);
+        assert_equals(control.form, null, "Moving out of the form");
+        first.moveBefore(node, null);
+        assert_equals(control.form, first, "Moving a previously unowned control into a form");
+      }, `${tag}: ${connected ? "connected" : "detached"} move of ${subtree ? "an ancestor" : "the control"} updates its form owner`);
+    }
+  }
+}
+</script>

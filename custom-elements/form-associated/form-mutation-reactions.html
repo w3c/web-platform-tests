@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Ordering of form-associated custom element reactions to tree mutations</title>
+<link rel="help" href="https://github.com/whatwg/html/issues/12169">
+<link rel="help" href="https://html.spec.whatwg.org/multipage/infrastructure.html#dom-trees">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<body>
+<script type="module">
+import { FormControl, fixture } from "./resources/mutation-reactions.mjs";
+
+for (const connected of [false, true]) {
+  for (const subtree of [false, true]) {
+    test(t => {
+      const root = fixture(t, connected);
+      const form = document.createElement("form");
+      const fieldset = document.createElement("fieldset");
+      fieldset.disabled = true;
+      form.append(fieldset);
+      root.append(form);
+      const control = new FormControl();
+      const node = subtree ? document.createElement("div") : control;
+      if (subtree) {
+        node.append(control);
+      }
+      control.clear();
+
+      fieldset.append(node);
+      assert_equals(control.elementInternals.form, form);
+      assert_true(control.matches(":disabled"));
+      assert_array_equals(control.reactions,
+        [...(connected ? ["connected"] : []), "associated", form, "disabled", true]);
+      for (const state of control.states) {
+        assert_equals(state.form, form, "Insertion reactions see the final owner");
+        assert_true(state.disabled, "Insertion reactions see the final disabledness");
+        assert_equals(state.connected, connected);
+      }
+
+      control.clear();
+      node.remove();
+      assert_equals(control.elementInternals.form, null);
+      assert_false(control.matches(":disabled"));
+      assert_array_equals(control.reactions,
+        [...(connected ? ["disconnected"] : []), "associated", null, "disabled", false]);
+      for (const state of control.states) {
+        assert_equals(state.form, null, "Removal reactions see the final owner");
+        assert_false(state.disabled, "Removal reactions see the final disabledness");
+        assert_false(state.connected);
+      }
+    }, `${connected ? "Connected" : "Detached"} insertion and removal of ${subtree ? "an ancestor" : "the control"}`);
+  }
+}
+
+test(t => {
+  const root = fixture(t);
+  const form = document.createElement("form");
+  const fieldset = document.createElement("fieldset");
+  fieldset.disabled = true;
+  const control = new FormControl();
+  fieldset.append(control);
+  form.append(fieldset);
+  control.clear();
+
+  root.append(form);
+  assert_array_equals(control.reactions, ["connected"]);
+  control.clear();
+  form.remove();
+  assert_equals(control.elementInternals.form, form);
+  assert_true(control.matches(":disabled"));
+  assert_array_equals(control.reactions, ["disconnected"]);
+}, "Connecting and disconnecting the whole form preserves its descendants' owner and disabledness");
+
+test(t => {
+  const root = fixture(t);
+  const forms = [document.createElement("form"), document.createElement("form")];
+  const fieldsets = forms.map(form => {
+    const fieldset = document.createElement("fieldset");
+    fieldset.disabled = true;
+    form.append(fieldset);
+    return fieldset;
+  });
+  root.append(...forms);
+  const control = new FormControl();
+  fieldsets[0].append(control);
+  control.clear();
+
+  fieldsets[1].append(control);
+  assert_array_equals(control.reactions, [
+    "disconnected", "associated", null, "disabled", false,
+    "connected", "associated", forms[1], "disabled", true
+  ]);
+  assert_equals(control.elementInternals.form, forms[1]);
+  assert_true(control.matches(":disabled"));
+}, "Ordinary append, unlike moveBefore, reports the removal and insertion transitions separately");
+
+for (const withID of [false, true]) {
+  test(t => {
+    const root = fixture(t);
+    const form = document.createElement("form");
+    form.id = "external-form";
+    root.append(form);
+    const subtree = document.createElement("div");
+    if (withID) {
+      subtree.id = "inserted-subtree";
+    }
+    const control = new FormControl();
+    control.setAttribute("form", form.id);
+    subtree.append(control);
+    control.clear();
+
+    root.append(subtree);
+    assert_array_equals(control.reactions, ["connected", "associated", form]);
+    control.clear();
+    subtree.remove();
+    assert_array_equals(control.reactions, ["disconnected", "associated", null]);
+  }, `An ancestor ${withID ? "with" : "without"} an ID does not reverse connection and form reactions`);
+}
+
+test(t => {
+  const root = fixture(t);
+  const form = document.createElement("form");
+  const fieldset = document.createElement("fieldset");
+  fieldset.disabled = true;
+  form.append(fieldset);
+  root.append(form);
+  const fragment = document.createDocumentFragment();
+  const controls = [new FormControl(), new FormControl()];
+  const reactions = [];
+  for (const [index, control] of controls.entries()) {
+    control.record = (...reaction) => reactions.push(index, ...reaction);
+    fragment.append(control);
+  }
+
+  fieldset.append(fragment);
+  assert_array_equals(reactions, [
+    0, "connected", 0, "associated", form, 0, "disabled", true,
+    1, "connected", 1, "associated", form, 1, "disabled", true
+  ]);
+}, "Fragment insertion delivers each control's connection and form reactions in tree order");
+
+test(t => {
+  const root = fixture(t);
+  const host = document.createElement("div");
+  const shadow = host.attachShadow({ mode: "open" });
+  const form = document.createElement("form");
+  const fieldset = document.createElement("fieldset");
+  fieldset.disabled = true;
+  const control = new FormControl();
+  fieldset.append(control);
+  form.append(fieldset);
+  shadow.append(form);
+  control.clear();
+
+  root.append(host);
+  assert_array_equals(control.reactions, ["connected"]);
+  control.clear();
+  host.remove();
+  assert_array_equals(control.reactions, ["disconnected"]);
+  assert_equals(control.elementInternals.form, form);
+  assert_true(control.matches(":disabled"));
+}, "Connecting and disconnecting a shadow host preserves its shadow controls' form state");
+</script>
