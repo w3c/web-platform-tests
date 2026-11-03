@@ -1,0 +1,9 @@
+<html class="test-wait">
+<link rel="help" href="https://github.com/servo/servo/pull/">
+<script>
+navigator.gpu.requestAdapter().then(a => a.requestDevice()).then(d => {
+  var t = d.createTexture({size: [64, 64], format: "rgba8unorm", usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT});
+  d.queue.copyExternalImageToTexture({source: document.createElement("video"), origin: [4294967295]}, {texture: t}, [919]);
+  setTimeout(function() { document.documentElement.removeAttribute("class"); }, 300);
+});
+</script>
