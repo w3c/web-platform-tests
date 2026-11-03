@@ -10,8 +10,30 @@
 
 // https://www.w3.org/TR/webnn/#api-mlgraphbuilder-logical
 // https://www.w3.org/TR/webnn/#api-mlgraphbuilder-where
-// Comparisons produce uint8 zero/one values. Passing those values to where
-// must preserve their truth values, even if their public output is omitted.
+//
+// Every test builds the same two-operator composition, with `a` a constant and
+// `b` an input of the same float type:
+//
+//   const condition = builder.<comparison>(a, b);   // uint8 zero/one
+//   const selected = builder.where(condition, one, zero);
+//
+// where `one` and `zero` are float32 scalar constants, so `selected` is the
+// comparison result re-expressed as exact float32 1.0 / 0.0. The expected
+// value is computed in JavaScript from the decoded float values and compared
+// with zero ULP: `where` is data movement, so any deviation is a wrong truth
+// value, not a rounding difference. Each comparison runs twice, once with
+// `condition` also exposed as a graph output and once with it kept internal,
+// because an implementation may lower the two differently (for example by
+// fusing the comparison into the selection, or by converting the internal
+// uint8 result through another type) and only the exposed form had coverage.
+//
+// The float16 operands are generated as bit patterns so the set covers every
+// subnormal, both zeros, both infinities and several NaN payloads exactly.
+// They are decoded to JavaScript numbers because the expected truth values
+// need IEEE semantics, which bit patterns do not give: +0 and -0 compare
+// equal, every NaN compares unequal to everything, and negative values order
+// in the opposite direction of their bit patterns. The decoded numbers are
+// also what the harness feeds to the float16 input and constant.
 const decodeComparisonHalf = bits => {
   const sign = bits & 0x8000 ? -1 : 1;
   const exponent = (bits >>> 10) & 31;
@@ -39,6 +61,8 @@ const comparisonInputs = comparisonBits.map(decodeComparisonHalf);
 const comparisonOther = comparisonBits.map((_, index) =>
   decodeComparisonHalf(
       comparisonThresholdBits[index % comparisonThresholdBits.length]));
+// The reference predicate for each WebNN comparison operator, evaluated on the
+// decoded float values exactly as the specification defines the operator.
 const comparisonFunctions = {
   equal: (a, b) => a === b,
   notEqual: (a, b) => a !== b,
