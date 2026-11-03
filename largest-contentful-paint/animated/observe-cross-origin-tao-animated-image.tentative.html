@@ -14,7 +14,7 @@
       assert_implements(window.LargestContentfulPaint,
                         "LargestContentfulPaint is not implemented");
       const beforeLoad = performance.now();
-      // Offsets inside `anim-gr.png`:
+      // Offsets inside `anim-tao.png`:
       //   IHDR: 8..33
       //   acTL: 33..53
       //   fcTL (1st frame): 53..91
@@ -35,10 +35,10 @@
       const url = REMOTE_ORIGIN +
                   '/images/anim-tao.png?pipe=trickle(304:d1)';
       const entry = await load_and_observe(url);
-      // anim-gr.png is 100 by 50.
+      // anim-tao.png is 100 by 50.
       const size = 100 * 50;
       checkImage(entry, url, 'image_id', size, beforeLoad, ["animated"]);
-    }, "Same origin animated image is observable and has a first frame.");
+    }, "Cross-origin animated image with TAO is observable and has a first frame.");
   </script>
 </body>
 </html>
