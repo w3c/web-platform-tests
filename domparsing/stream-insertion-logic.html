@@ -542,40 +542,40 @@
 
       promise_test(async (t) => {
         const parent = document.createElement("div");
-        parent.innerHTML = '<?start name="m"?>old<?end?>';
         document.body.appendChild(parent);
         t.add_cleanup(() => parent.remove());
         const ref_node = document.createElement("span");
         parent.appendChild(ref_node);
 
-        const ce_name = `x-displace-ref-${++ceCounter}`;
-        let connections = 0;
-        customElements.define(ce_name, class extends HTMLAnchorElement {
-          connectedCallback() {
-            if (++connections === 2) {
-              ref_node.remove();
-            }
-          }
-        }, { extends: "a" });
-
-        window.remove_table = () => parent.querySelector("table").remove();
-        t.add_cleanup(() => { delete window.remove_table; });
+        let table = null;
+        window.detach = () => {
+          table = parent.querySelector("table");
+          table.remove();
+          ref_node.remove();
+        };
+        t.add_cleanup(() => { delete window.detach; });
 
         const writer = create_unsafe_stream(parent, ref_node).getWriter();
         await promise_rejects_dom(
           t,
           "HierarchyRequestError",
           writer.write(
-            `<b><a is="${ce_name}">1</b><table><script>window.remove_table();<` +
-            `/script> x<template for="m">new</template>`,
+            '<table><?start name="m"?><tbody id="old"></tbody><?end?>' +
+            '<script>window.detach();<' + '/script> x<template for="m"></template>',
           ),
           "Foster-parented character after ref_node displacement in table text must reject with HierarchyRequestError",
         );
+        await promise_rejects_dom(
+          t,
+          "HierarchyRequestError",
+          writer.closed,
+          "Stream must be errored with HierarchyRequestError",
+        );
 
-        assert_equals(connections, 2, "foster-parented formatting element connectedCallback ran");
-        assert_true(parent.textContent.includes("old"), "Marker range must not be updated after table-text abort");
-        assert_false(parent.textContent.includes("new"), "Reprocessed <template for> must not run after table-text abort");
-      }, `${method_name}: ref_node displacement during table-text foster parenting errors the stream without reprocessing <template for>`);
+        assert_not_equals(table, null, "Streamed <table> was captured before detaching");
+        assert_not_equals(table.querySelector("#old"), null, "Reprocessed <template for> must not patch detached table after table-text error");
+        assert_equals(parent.innerHTML, prefix, "Foster-parented table text after displacement must be dropped");
+      }, `${method_name}: ref_node displacement during table-text foster parenting errors the stream without applying <template for>`);
 
       for (const [label, chunk] of [["whitespace", "   \n\t  "], ["a comment", "<!--comment-->"]]) {
         promise_test(async (t) => {
