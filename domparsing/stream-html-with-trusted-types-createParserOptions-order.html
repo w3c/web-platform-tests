@@ -21,6 +21,8 @@
         createParserOptions(options, type, sink),
     });
 
+    const err = new Error("createParserOptions called");
+
     for (const pos of ["", "Before", "After", "ReplaceWith", "Append", "Prepend"]) {
       const method_name = `stream${pos}HTMLUnsafe`;
       const expected_iface =
@@ -31,7 +33,7 @@
         createParserOptions = (options, type, sink) => {
           recorded_type = type;
           recorded_sink = sink;
-          throw new Error("createParserOptions called");
+          throw err;
         };
         t.add_cleanup(() => {
           createParserOptions = (options) => options;
@@ -43,16 +45,11 @@
         if (pos === "") {
           element.appendChild(document.createElement("span"));
         }
-        try {
-          element[method_name]();
-          assert_unreached("Should have thrown");
-        } catch (e) {
-          assert_equals(e.message, "createParserOptions called");
-          assert_equals(recorded_type, "TrustedHTMLParserOptions");
-          assert_equals(recorded_sink, `${expected_iface} ${method_name}`);
-          if (pos === "") {
-            assert_equals(element.childNodes.length, 1);
-          }
+        assert_throws_exactly(err, () => element[method_name]());
+        assert_equals(recorded_type, "TrustedHTMLParserOptions");
+        assert_equals(recorded_sink, `${expected_iface} ${method_name}`);
+        if (pos === "") {
+          assert_equals(element.childNodes.length, 1);
         }
       }, `${method_name} checks createParserOptions before ${pos === "" ? "clearing children" : "hierarchy checks"}`);
     }
@@ -65,21 +62,16 @@
         createParserOptions = (options, type, sink) => {
           recorded_type = type;
           recorded_sink = sink;
-          throw new Error("createParserOptions called");
+          throw err;
         };
         t.add_cleanup(() => {
           createParserOptions = (options) => options;
         });
 
         const detachedText = document.createTextNode("detached");
-        try {
-          detachedText[method_name]();
-          assert_unreached("Should have thrown");
-        } catch (e) {
-          assert_equals(e.message, "createParserOptions called");
-          assert_equals(recorded_type, "TrustedHTMLParserOptions");
-          assert_equals(recorded_sink, `Node ${method_name}`);
-        }
+        assert_throws_exactly(err, () => detachedText[method_name]());
+        assert_equals(recorded_type, "TrustedHTMLParserOptions");
+        assert_equals(recorded_sink, `Node ${method_name}`);
       }, `CharacterData.${method_name} checks createParserOptions before hierarchy checks`);
     }
 
@@ -90,7 +82,7 @@
         createParserOptions = (options, type, sink) => {
           recorded_type = type;
           recorded_sink = sink;
-          throw new Error("createParserOptions called");
+          throw err;
         };
         t.add_cleanup(() => {
           createParserOptions = (options) => options;
@@ -98,14 +90,9 @@
 
         const host = document.createElement("div");
         const sr = host.attachShadow({ mode: "open" });
-        try {
-          sr[method_name]();
-          assert_unreached("Should have thrown");
-        } catch (e) {
-          assert_equals(e.message, "createParserOptions called");
-          assert_equals(recorded_type, "TrustedHTMLParserOptions");
-          assert_equals(recorded_sink, `ShadowRoot ${method_name}`);
-        }
+        assert_throws_exactly(err, () => sr[method_name]());
+        assert_equals(recorded_type, "TrustedHTMLParserOptions");
+        assert_equals(recorded_sink, `ShadowRoot ${method_name}`);
       }, `ShadowRoot.${method_name} passes ShadowRoot sink name to createParserOptions`);
     }
 
