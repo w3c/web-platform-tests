@@ -523,7 +523,7 @@
         document.body.appendChild(parent);
         t.add_cleanup(() => parent.remove());
         const ref_node = document.createElement("span");
-        parent.appendChild(ref_node);
+        parent.prepend(ref_node);
 
         window.remove_ref = () => ref_node.remove();
         t.add_cleanup(() => { delete window.remove_ref; });
