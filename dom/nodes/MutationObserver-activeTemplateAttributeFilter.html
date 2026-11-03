@@ -1,0 +1,102 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>MutationObserver: activeTemplateAttributeFilter option</title>
+<link rel="help" href="https://dom.spec.whatwg.org/#dom-mutationobserver-observe">
+<link rel="help" href="https://dom.spec.whatwg.org/#dom-mutationobserverinit-activetemplateattributefilter">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script>
+  test(() => {
+    const target = document.createElement("div");
+    const observer = new MutationObserver(() => {});
+    observer.observe(target, { activeTemplateAttributeFilter: [] });
+    const child = document.createElement("span");
+    target.append(child);
+    const records = observer.takeRecords();
+    assert_equals(records.length, 1);
+    assert_equals(records[0].type, "childList");
+    assert_equals(records[0].addedNodes[0], child);
+  }, "activeTemplateAttributeFilter implies childList");
+
+  test(() => {
+    const target = document.createElement("div");
+    const observer = new MutationObserver(() => {});
+    observer.observe(target, { activeTemplateAttributeFilter: ["for"], childList: true });
+    target.append(document.createElement("span"));
+    assert_equals(observer.takeRecords().length, 1);
+  }, "activeTemplateAttributeFilter can be combined with childList: true");
+
+  test(() => {
+    const target = document.createElement("div");
+    const observer = new MutationObserver(() => {});
+    assert_throws_js(TypeError, () => {
+      observer.observe(target, {
+        activeTemplateAttributeFilter: [],
+        childList: false,
+        attributes: true,
+      });
+    });
+  }, "activeTemplateAttributeFilter with childList: false throws");
+
+  test(() => {
+    const target = document.createElement("div");
+    const observer = new MutationObserver(() => {});
+    observer.observe(target, { activeTemplateAttributeFilter: [], attributes: true });
+    target.setAttribute("a", "b");
+    target.append(document.createElement("span"));
+    assert_array_equals(observer.takeRecords().map(r => r.type), ["attributes", "childList"]);
+  }, "activeTemplateAttributeFilter implies childList when combined with other options");
+
+  test(() => {
+    const target = document.createElement("div");
+    const observer = new MutationObserver(() => {});
+    assert_throws_js(TypeError, () => {
+      observer.observe(target, {});
+    });
+    assert_throws_js(TypeError, () => {
+      observer.observe(target, { childList: false });
+    });
+  }, "observe() without activeTemplateAttributeFilter still requires childList, attributes, or characterData");
+
+  test(() => {
+    const target = document.createElement("div");
+    const observer = new MutationObserver(() => {});
+    assert_throws_js(TypeError, () => {
+      observer.observe(target, { activeTemplateAttributeFilter: 1, childList: true });
+    });
+  }, "activeTemplateAttributeFilter must be a sequence");
+
+  test(() => {
+    assert_true("activeTemplateStatus" in MutationRecord.prototype);
+    assert_true("activeTemplateAttributes" in MutationRecord.prototype);
+
+    const target = document.createElement("div");
+    const observer = new MutationObserver(() => {});
+    observer.observe(target, {
+      activeTemplateAttributeFilter: ["for"],
+      attributes: true,
+      characterData: true,
+      subtree: true,
+    });
+    target.setAttribute("for", "x");
+    target.append("text");
+    target.firstChild.data = "changed";
+    target.firstChild.remove();
+    const records = observer.takeRecords();
+    assert_array_equals(records.map(r => r.type),
+      ["attributes", "childList", "characterData", "childList"]);
+    for (const record of records) {
+      assert_equals(record.activeTemplateStatus, null, `${record.type} activeTemplateStatus`);
+      assert_equals(record.activeTemplateAttributes, null, `${record.type} activeTemplateAttributes`);
+    }
+  }, "Records for mutations made by script have null activeTemplateStatus and activeTemplateAttributes");
+
+  test(() => {
+    const target = document.createElement("div");
+    const observer = new MutationObserver(() => {});
+    observer.observe(target, { activeTemplateAttributeFilter: [] });
+    observer.observe(target, { attributes: true });
+    target.append(document.createElement("span"));
+    assert_equals(observer.takeRecords().length, 0);
+  }, "Observing the same node again replaces activeTemplateAttributeFilter and the implied childList");
+</script>

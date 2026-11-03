@@ -1,0 +1,44 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>HTML partial updates: mutation records for a template for that replaces a range</title>
+<link rel="help" href="https://html.spec.whatwg.org/multipage/parsing.html#current-active-template">
+<link rel="help" href="https://dom.spec.whatwg.org/#dom-mutationobserverinit-activetemplateattributefilter">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="resources/mutation-records.js"></script>
+<div id="target">before<?start name="p">old<b>fallback</b><?end>after</div>
+<script>
+  const target = document.getElementById("target");
+  const getFilteredRecords = collectRecords(target, {
+    childList: true,
+    activeTemplateAttributeFilter: ["for"],
+  });
+  const getPlainRecords = collectRecords(target, { childList: true });
+</script>
+<template for="p"><span>new</span>text</template>
+<script>
+  test(() => {
+    assert_array_equals(getFilteredRecords().map(describeRecord), [
+      `start: added [] removed [<?start>, "old", <b>] between "before" and <?end>`,
+      `update: added [<span>] removed [] between "before" and <?end>`,
+      `update: added ["text"] removed [] between <span> and <?end>`,
+      `end: added [] removed [<?end>] between "text" and "after"`,
+    ]);
+  }, "The start record removes <?start> and the fallback content, and the end record removes <?end>");
+
+  test(() => {
+    assert_array_equals(getPlainRecords().map(describeRecord), [
+      `null: added [] removed [<?start>, "old", <b>] between "before" and <?end>`,
+      `null: added [<span>] removed [] between "before" and <?end>`,
+      `null: added ["text"] removed [] between <span> and <?end>`,
+      `null: added [] removed [<?end>] between "text" and "after"`,
+    ]);
+    for (const record of getPlainRecords()) {
+      assert_equals(record.activeTemplateAttributes, null);
+    }
+  }, "An observer without activeTemplateAttributeFilter gets the same records with null status and attributes");
+
+  test(() => {
+    assert_equals(target.innerHTML, "before<span>new</span>textafter");
+  }, "The patch is applied");
+</script>

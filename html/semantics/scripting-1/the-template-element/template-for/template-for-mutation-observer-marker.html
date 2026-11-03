@@ -1,0 +1,34 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>HTML partial updates: mutation records for a template for that inserts at a marker</title>
+<link rel="help" href="https://html.spec.whatwg.org/multipage/parsing.html#current-active-template">
+<link rel="help" href="https://dom.spec.whatwg.org/#dom-mutationobserverinit-activetemplateattributefilter">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="resources/mutation-records.js"></script>
+<div id="target">a<?marker name="m">b</div>
+<script>
+  const target = document.getElementById("target");
+  const getFilteredRecords = collectRecords(target, {
+    childList: true,
+    activeTemplateAttributeFilter: [],
+  });
+  const getPlainRecords = collectRecords(target, { childList: true });
+</script>
+<template for="m"><i>x</i></template>
+<script>
+  test(() => {
+    assert_array_equals(getFilteredRecords().map(describeRecord), [
+      `start: added [] removed [] between "a" and <?marker>`,
+      `update: added [<i>] removed [] between "a" and <?marker>`,
+      `end: added [] removed [<?marker>] between <i> and "b"`,
+    ]);
+  }, "An empty start record marks the start, and the end record removes the marker");
+
+  test(() => {
+    assert_array_equals(getPlainRecords().map(describeRecord), [
+      `null: added [<i>] removed [] between "a" and <?marker>`,
+      `null: added [] removed [<?marker>] between <i> and "b"`,
+    ]);
+  }, "An observer without activeTemplateAttributeFilter does not get the empty start record");
+</script>
