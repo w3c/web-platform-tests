@@ -401,10 +401,15 @@
         .map((n) => `${n.target}:${n.data}`);
       assert_array_equals(markers, ['start:name="m"', "end:"],
                           "</template> must not remove patch markers after abort in table text");
-      assert_equals(target.querySelector("#patched").textContent, "Old");
+      // The old content was removed when the <template for> start tag was processed. The
+      // content streamed before the abort stays; the foster-parented text after it doesn't.
+      assert_array_equals(
+        Array.from(target.querySelector("#patched").childNodes, (n) => n.nodeName),
+        ["start", "B", "A", "TABLE", "end"]);
+      assert_equals(target.querySelector("#patched").textContent, "1");
       await failOnTimeout(abortPromise);
       await promise_rejects_exactly(t, "aborted-in-table-text", writer.closed);
-    }, `${method}: abort() from a foster-parented custom element reaction in table text prevents reprocessing </template>`);
+    }, `${method}: abort() from a foster-parented custom element reaction in table text keeps patch markers at </template>`);
 
     promise_test(async (t) => {
       const target = document.getElementById("target");

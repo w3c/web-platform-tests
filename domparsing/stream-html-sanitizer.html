@@ -495,4 +495,27 @@
       }, `element.${method}: a <form> in removeElements is removed along with its descendants and does not become the form owner`);
     }
   }
+
+  for (const method of ["streamHTML", "streamHTMLUnsafe"]) {
+    promise_test(async (t) => {
+      const doc = document.implementation.createHTMLDocument("");
+      const placeholder = document.createElement("div");
+      const writer = placeholder[method]({
+        sanitizer: { replaceWithChildrenElements: ["section"] },
+      }).getWriter();
+      // <b> is foster parented before the <table>, and <section>'s children are redirected into
+      // <b>.
+      await writer.write("<table><b><section>");
+      const table = placeholder.querySelector("table");
+      assert_equals(placeholder.querySelector("b")?.nextSibling, table, "sanity check: <b> is foster parented");
+      doc.replaceChild(table, doc.documentElement);
+      // The adoption agency algorithm foster parents the clone of <b> before the <table>, which is
+      // now the document element of doc. It must not be inserted there.
+      await writer.write("</b>");
+      await writer.close();
+      assert_array_equals(Array.from(doc.childNodes, (n) => n.nodeName), ["html", "TABLE"]);
+      assert_equals(doc.documentElement, table);
+      assert_equals(table.childNodes.length, 0);
+    }, `element.${method}: the adoption agency algorithm does not insert into a document that has a document element`);
+  }
 </script>

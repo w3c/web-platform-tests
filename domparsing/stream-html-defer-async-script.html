@@ -231,4 +231,39 @@
       assert_false(readystatechange_fired);
     }, `element.${method} should not modify Document readyState`);
   }
+
+  promise_test(async (t) => {
+    window.events = [];
+    const placeholder = document.getElementById("placeholder");
+    const container = document.createElement("div");
+    const ref = document.createElement("span");
+    container.append(ref);
+    placeholder.append(container);
+    t.add_cleanup(() => container.remove());
+
+    const writer = container.streamPrependHTMLUnsafe({ runScripts: true }).getWriter();
+    // The trailing "<" is only emitted, together with EOF, when the stream is closed.
+    await writer.write(
+      `<script defer src="data:text/javascript,window.events.push('defer');{let cache_buster=${Math.random()}}"></` + `script><`
+    );
+    ref.remove();
+    // Inserting the "<" before the removed reference child errors the stream and aborts the
+    // parser, but EOF is still processed.
+    await promise_rejects_dom(t, "HierarchyRequestError", writer.close());
+    assert_equals(container.textContent, "", "the trailing '<' is not inserted");
+
+    // Control: a defer script streamed and closed now runs within a few tasks, so the defer script
+    // of the aborted parser would have run by then too.
+    window.control_ran = Promise.withResolvers();
+    t.add_cleanup(() => { delete window.control_ran; });
+    const control = document.createElement("div");
+    container.append(control);
+    const controlWriter = control.streamAppendHTMLUnsafe({ runScripts: true }).getWriter();
+    await controlWriter.write(
+      `<script defer src="data:text/javascript,window.events.push('control-defer');window.control_ran.resolve();{let cache_buster=${Math.random()}}"></` + `script>`
+    );
+    await controlWriter.close();
+    await failOnTimeout(window.control_ran.promise);
+    assert_array_equals(window.events, ["control-defer"]);
+  }, "element.streamPrependHTMLUnsafe: defer scripts do not run if the reference child is removed before a trailing '<' is flushed by close()");
 </script>
