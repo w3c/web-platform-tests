@@ -1,5 +1,6 @@
 import pytest
 
+from tests.bidi import get_invalid_cases
 from webdriver.bidi.error import (
     InvalidArgumentException,
     NoSuchFrameException,
@@ -14,7 +15,7 @@ pytestmark = pytest.mark.asyncio
 CARD_KEYS = ["number", "name", "expiryMonth", "expiryYear", "cvc"]
 
 
-@pytest.mark.parametrize("value", [None, False, 42, {}, []])
+@pytest.mark.parametrize("value", get_invalid_cases("string"))
 async def test_params_context_invalid_type(bidi_session, load_form, get_element, value):
     await load_form(CARD_FORM)
     element = await get_element("#cc-number")
@@ -28,10 +29,12 @@ async def test_params_context_invalid_value(bidi_session, load_form, get_element
     element = await get_element("#cc-number")
 
     with pytest.raises(NoSuchFrameException):
-        await bidi_session.autofill.trigger(context="foo", element=element, card=CARD)
+        await bidi_session.autofill.trigger(
+            context="_invalid_context_id_", element=element, card=CARD
+        )
 
 
-@pytest.mark.parametrize("value", [None, False, 42, "foo", []])
+@pytest.mark.parametrize("value", get_invalid_cases("dict"))
 async def test_params_element_invalid_type(bidi_session, top_context, value):
     with pytest.raises(InvalidArgumentException):
         await bidi_session.autofill.trigger(
@@ -46,7 +49,7 @@ async def test_params_element_sharedId_missing(bidi_session, top_context):
         )
 
 
-@pytest.mark.parametrize("value", [None, False, 42, {}, []])
+@pytest.mark.parametrize("value", get_invalid_cases("string"))
 async def test_params_element_sharedId_invalid_type(bidi_session, top_context, value):
     with pytest.raises(InvalidArgumentException):
         await bidi_session.autofill.trigger(
@@ -58,7 +61,7 @@ async def test_params_element_invalid_shared_reference_value(bidi_session, top_c
     with pytest.raises(NoSuchNodeException):
         await bidi_session.autofill.trigger(
             context=top_context["context"],
-            element={"sharedId": "invalid"},
+            element={"sharedId": "_invalid_shared_id_"},
             card=CARD,
         )
 
@@ -143,7 +146,7 @@ async def test_params_no_card_or_address(
         )
 
 
-@pytest.mark.parametrize("value", [None, False, 42, "foo", []])
+@pytest.mark.parametrize("value", get_invalid_cases("dict"))
 async def test_params_card_invalid_type(
     bidi_session, top_context, load_form, get_element, value
 ):
@@ -170,7 +173,7 @@ async def test_params_card_missing_field(
         )
 
 
-@pytest.mark.parametrize("value", [None, False, 42, {}, []])
+@pytest.mark.parametrize("value", get_invalid_cases("string"))
 @pytest.mark.parametrize("key", CARD_KEYS)
 async def test_params_card_field_invalid_type(
     bidi_session, top_context, load_form, get_element, key, value
@@ -186,7 +189,7 @@ async def test_params_card_field_invalid_type(
         )
 
 
-@pytest.mark.parametrize("value", [None, False, 42, "foo", []])
+@pytest.mark.parametrize("value", get_invalid_cases("dict"))
 async def test_params_address_invalid_type(
     bidi_session, top_context, load_form, get_element, value
 ):
@@ -211,7 +214,7 @@ async def test_params_address_fields_missing(
         )
 
 
-@pytest.mark.parametrize("value", [None, False, 42, "foo", {}])
+@pytest.mark.parametrize("value", get_invalid_cases("list"))
 async def test_params_address_fields_invalid_type(
     bidi_session, top_context, load_form, get_element, value
 ):
@@ -226,7 +229,7 @@ async def test_params_address_fields_invalid_type(
         )
 
 
-@pytest.mark.parametrize("value", [None, False, 42, "foo", []])
+@pytest.mark.parametrize("value", get_invalid_cases("dict"))
 async def test_params_address_field_invalid_type(
     bidi_session, top_context, load_form, get_element, value
 ):
@@ -241,7 +244,21 @@ async def test_params_address_field_invalid_type(
         )
 
 
-@pytest.mark.parametrize("value", [None, False, 42, {}, []])
+async def test_params_address_field_name_missing(
+    bidi_session, top_context, load_form, get_element
+):
+    await load_form(ADDRESS_FORM)
+    element = await get_element("#given-name")
+
+    with pytest.raises(InvalidArgumentException):
+        await bidi_session.autofill.trigger(
+            context=top_context["context"],
+            element=element,
+            address={"fields": [{"value": "John"}]},
+        )
+
+
+@pytest.mark.parametrize("value", get_invalid_cases("string"))
 async def test_params_address_field_name_invalid_type(
     bidi_session, top_context, load_form, get_element, value
 ):
@@ -273,7 +290,21 @@ async def test_params_address_field_name_invalid_value(
         )
 
 
-@pytest.mark.parametrize("value", [None, False, 42, {}, []])
+async def test_params_address_field_value_missing(
+    bidi_session, top_context, load_form, get_element
+):
+    await load_form(ADDRESS_FORM)
+    element = await get_element("#given-name")
+
+    with pytest.raises(InvalidArgumentException):
+        await bidi_session.autofill.trigger(
+            context=top_context["context"],
+            element=element,
+            address={"fields": [{"name": "given-name"}]},
+        )
+
+
+@pytest.mark.parametrize("value", get_invalid_cases("string"))
 async def test_params_address_field_value_invalid_type(
     bidi_session, top_context, load_form, get_element, value
 ):

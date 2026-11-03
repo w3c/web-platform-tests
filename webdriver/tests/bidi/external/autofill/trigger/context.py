@@ -33,11 +33,10 @@ async def test_context(bidi_session, top_context, new_tab, load_form, get_elemen
 
 
 @pytest.mark.parametrize("domain", ["", "alt"], ids=["same_origin", "cross_origin"])
-async def test_iframe(bidi_session, new_tab, inline, get_element, domain):
-    iframe_url = inline(CARD_FORM, domain=domain)
+async def test_iframe(bidi_session, new_tab, inline, iframe, get_element, domain):
     await bidi_session.browsing_context.navigate(
         context=new_tab["context"],
-        url=inline(f"<iframe src='{iframe_url}'></iframe>"),
+        url=inline(CARD_FORM + iframe(CARD_FORM, domain=domain)),
         wait="complete",
     )
 
@@ -55,4 +54,49 @@ async def test_iframe(bidi_session, new_tab, inline, get_element, domain):
         "cc-number": CARD["number"],
         "cc-exp-month": CARD["expiryMonth"],
         "cc-exp-year": CARD["expiryYear"],
+    }
+
+    # Make sure that the form in the parent context is not filled.
+    values = await get_form_control_values(bidi_session, new_tab)
+    assert values == {
+        "cc-name": "",
+        "cc-number": "",
+        "cc-exp-month": "",
+        "cc-exp-year": "",
+    }
+
+
+@pytest.mark.parametrize("domain", ["", "alt"], ids=["same_origin", "cross_origin"])
+async def test_parent_context(
+    bidi_session, new_tab, inline, iframe, get_element, domain
+):
+    await bidi_session.browsing_context.navigate(
+        context=new_tab["context"],
+        url=inline(CARD_FORM + iframe(CARD_FORM, domain=domain)),
+        wait="complete",
+    )
+
+    contexts = await bidi_session.browsing_context.get_tree(root=new_tab["context"])
+    iframe_context = contexts[0]["children"][0]
+    element = await get_element("#cc-number", context=new_tab)
+
+    await bidi_session.autofill.trigger(
+        context=new_tab["context"], element=element, card=CARD
+    )
+
+    values = await get_form_control_values(bidi_session, new_tab)
+    assert values == {
+        "cc-name": CARD["name"],
+        "cc-number": CARD["number"],
+        "cc-exp-month": CARD["expiryMonth"],
+        "cc-exp-year": CARD["expiryYear"],
+    }
+
+    # Make sure that the form in the iframe is not filled.
+    values = await get_form_control_values(bidi_session, iframe_context)
+    assert values == {
+        "cc-name": "",
+        "cc-number": "",
+        "cc-exp-month": "",
+        "cc-exp-year": "",
     }
