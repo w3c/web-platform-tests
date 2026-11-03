@@ -15,6 +15,20 @@ DOCUMENT_ROLES = [Atspi.Role.DOCUMENT_WEB, Atspi.Role.DOCUMENT_FRAME]
 # Firefox uses "DocURL", Chromium family browsers use "URI".
 DOCUMENT_URL_ATTRIBUTES = ["DocURL", "URI"]
 
+# The AT-SPI checks that the core-aam role tests make for each Core-AAM role
+# mapping, keyed by Core-AAM section id without "role-map-". Each entry has a
+# role, and optionally object attributes, interfaces (names registered in
+# `get_interface`) and states (as in `get_state_list_helper`).
+ROLE_MAPPINGS = {
+    "button": {"role": Atspi.Role.PUSH_BUTTON},
+    "combobox": {
+        "role": Atspi.Role.COMBO_BOX,
+        "states": ["STATE_EXPANDABLE", "STATE_HAS_POPUP"],
+    },
+    "link": {"role": Atspi.Role.LINK, "interfaces": ["AtkHyperlinkImpl"]},
+    "navigation": {"role": Atspi.Role.LANDMARK, "attributes": ["xml-roles:navigation"]},
+}
+
 
 class AtspiWrapper(ApiWrapper[Atspi.Accessible, Atspi.Event]):
 
@@ -53,6 +67,7 @@ class AtspiWrapper(ApiWrapper[Atspi.Accessible, Atspi.Event]):
         interface_map = {
             # NOTE: Please add new ATK/ATSPI interfaces and their corresponding
             # Accessible API functions here as needed for testing.
+            "AtkHyperlinkImpl": Atspi.Accessible.get_hyperlink,
             "AtkTable": Atspi.Accessible.get_table_iface,
             "AtkTableCell": Atspi.Accessible.get_table_cell,
         }
@@ -73,6 +88,44 @@ class AtspiWrapper(ApiWrapper[Atspi.Accessible, Atspi.Event]):
         """
         state_list = Atspi.Accessible.get_state_set(node).get_states()
         return [state.value_name.removeprefix("ATSPI_") for state in state_list]
+
+    def assert_role_mapping(self, node: Atspi.Accessible, role: str) -> None:
+        """Asserts that the node is exposed with the AT-SPI mapping for a role.
+
+        :param role: A key of `ROLE_MAPPINGS`, e.g. "link".
+        """
+        if role not in ROLE_MAPPINGS:
+            raise ValueError(
+                f"Unknown role mapping: '{role}'. If Core-AAM defines this "
+                f"mapping, please add it to `ROLE_MAPPINGS` in `atspi_wrapper.py`."
+            )
+        mapping = ROLE_MAPPINGS[role]
+
+        # Assertion messages are explicit because pytest does not rewrite
+        # asserts in this module.
+        expected_role = mapping["role"]
+        actual_role = Atspi.Accessible.get_role(node)
+        assert actual_role == expected_role, (
+            f"{role}: expected role {expected_role.value_name.removeprefix('ATSPI_')}, "
+            f"got {actual_role.value_name.removeprefix('ATSPI_')}"
+        )
+
+        if "attributes" in mapping:
+            attributes = Atspi.Accessible.get_attributes_as_array(node)
+            for attribute in mapping["attributes"]:
+                assert attribute in attributes, (
+                    f"{role}: expected object attribute {attribute}, got {attributes}"
+                )
+
+        for interface in mapping.get("interfaces", []):
+            assert self.get_interface(node, interface) is not None, (
+                f"{role}: expected interface {interface}"
+            )
+
+        if "states" in mapping:
+            states = self.get_state_list_helper(node)
+            for state in mapping["states"]:
+                assert state in states, f"{role}: expected state {state}, got {states}"
 
     def _find_browser(self) -> Optional[Atspi.Accessible]:
         if self.pid and self.pid != 0:

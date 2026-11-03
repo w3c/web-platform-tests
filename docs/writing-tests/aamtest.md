@@ -178,6 +178,27 @@ event = atspi.expect_event(
 )
 ```
 
+### Testing role mappings
+
+When an HTML-AAM element spec says that the element is exposed with
+a Core-AAM role's mapping (current phrasing is "Use WAI-ARIA mapping"), use the
+`assert_role_mapping()` method of `atspi`. It takes the node and the
+id of the role's Core-AAM section without the "role-map-" prefix,
+and asserts the checks recorded for that role in `ROLE_MAPPINGS` in
+`core-aam/aamtests/support/atspi_wrapper.py`. It always checks the role and
+it can additionally check the object attributes, interfaces, and states.
+
+For example, testing that `<nav id="test">` is exposed with the mapping of the
+`navigation` role:
+```python
+node = atspi.find_node("test", session.url)
+atspi.assert_role_mapping(node, "navigation")
+```
+
+If the role isn't in `ROLE_MAPPINGS` yet, add its entry and change the role's
+test in `core-aam/aamtests/role/` to call `assert_role_mapping()`, so that the
+Core-AAM test checks the entry.
+
 ## Adding support for an unsupported API
 
 To add an unsupported API:

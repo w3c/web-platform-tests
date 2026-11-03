@@ -10,8 +10,7 @@ def test_atspi(atspi, session, inline):
     # Object Attribute: xml-roles:navigation
 
     node = atspi.find_node("test", session.url)
-    assert atspi.Accessible.get_role(node) == atspi.Role.LANDMARK
-    assert "xml-roles:navigation" in atspi.Accessible.get_attributes_as_array(node)
+    atspi.assert_role_mapping(node, "navigation")
 
 # def test_axapi(axapi, session, inline):
 #     session.url = inline(TEST_HTML)
