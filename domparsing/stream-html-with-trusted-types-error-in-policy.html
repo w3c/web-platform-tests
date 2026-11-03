@@ -15,12 +15,12 @@
     <div id="container"></div>
     <script>
       const container = document.querySelector("#container");
-      // We have to replace this global because we are overriding the default policy from within the test.
+      const err = new Error("oops");
 
       const policy = trustedTypes.createPolicy("default", {
         createHTML: (_) => "",
         createParserOptions: (options) => {
-          throw new Error("oops");
+          throw err;
         },
       });
 
@@ -34,20 +34,20 @@
       ];
 
       for (const method of methods) {
-      promise_test(async (t) => {
-        let d = document.createElement("div");
-        let child = document.createElement("span");
-        d.appendChild(child);
-        document.querySelector("#container").appendChild(d);
-        t.add_cleanup(() => d.remove());
-        assert_throws_js(
-          Error,
-          () => d[method]().getWriter(),
-          "error in createParserOptions is rethrown",
-        );
-        assert_equals(d.parentNode, container, "target remains connected if createParserOptions throws");
-        assert_equals(d.firstChild, child, "target children remain intact if createParserOptions throws");
-      }, `error in createParserOptions is rethrown from default policy for ${method}`);
+        promise_test(async (t) => {
+          let d = document.createElement("div");
+          let child = document.createElement("span");
+          d.appendChild(child);
+          document.querySelector("#container").appendChild(d);
+          t.add_cleanup(() => d.remove());
+          assert_throws_exactly(
+            err,
+            () => d[method]().getWriter(),
+            "error in createParserOptions is rethrown",
+          );
+          assert_equals(d.parentNode, container, "target remains connected if createParserOptions throws");
+          assert_equals(d.firstChild, child, "target children remain intact if createParserOptions throws");
+        }, `error in createParserOptions is rethrown from default policy for ${method}`);
       }
 
       for (const method of [
@@ -61,8 +61,8 @@
           const child = sr.appendChild(document.createElement("span"));
           container.appendChild(host);
           t.add_cleanup(() => host.remove());
-          assert_throws_js(
-            Error,
+          assert_throws_exactly(
+            err,
             () => sr[method]().getWriter(),
             "error in createParserOptions is rethrown",
           );
@@ -80,8 +80,8 @@
           const text = parent.appendChild(document.createTextNode("anchor"));
           container.appendChild(parent);
           t.add_cleanup(() => parent.remove());
-          assert_throws_js(
-            Error,
+          assert_throws_exactly(
+            err,
             () => text[method]().getWriter(),
             "error in createParserOptions is rethrown",
           );
@@ -90,8 +90,8 @@
       }
 
       promise_test(async (t) => {
-        assert_throws_js(
-          Error,
+        assert_throws_exactly(
+          err,
           () => policy.createParserOptions({ runScripts: true }),
           "error in createParserOptions is rethrown",
         );
