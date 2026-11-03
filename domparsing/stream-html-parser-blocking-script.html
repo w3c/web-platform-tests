@@ -681,8 +681,20 @@
     );
     const closePromise = writer.close();
     await promise_rejects_dom(t, "HierarchyRequestError", failOnTimeout(closePromise));
-    await new Promise(r => t.step_timeout(r, 0));
-    assert_array_equals(window.events, ["slow"], "deferred script must not execute when close() rejects due to displaced referenceChild");
+
+    // Control: a defer script streamed and closed now runs within a few tasks, so a deferred
+    // script wrongly kept by the aborted parser would have run by then too.
+    window.control_ran = Promise.withResolvers();
+    t.add_cleanup(() => { delete window.control_ran; });
+    const control = document.createElement("div");
+    placeholder.append(control);
+    const controlWriter = control.streamAppendHTMLUnsafe({ runScripts: true }).getWriter();
+    await controlWriter.write(
+      `<script defer src="data:text/javascript,window.events.push('control');window.control_ran.resolve();"></` + "script>"
+    );
+    await controlWriter.close();
+    await failOnTimeout(window.control_ran.promise);
+    assert_array_equals(window.events, ["slow", "control"], "deferred script must not execute when close() rejects due to displaced referenceChild");
     assert_not_equals(placeholder.querySelector("#before-blocking"), null);
     assert_equals(placeholder.querySelector("#after-removal"), null);
   }, "streamBeforeHTMLUnsafe: close() rejects with HierarchyRequestError if referenceChild is removed after a pending parser-blocking script");

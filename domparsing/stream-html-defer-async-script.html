@@ -198,9 +198,20 @@
 
       await writer.abort();
 
-      // Wait a bit to ensure they don't execute
-      await new Promise(resolve => t.step_timeout(resolve, 50));
-      assert_array_equals(window.events, []);
+      // Control: defer and module scripts streamed and closed now run within a few tasks, so
+      // scripts wrongly kept by the aborted parser would have run by then too.
+      window.control_ran = Promise.withResolvers();
+      t.add_cleanup(() => { delete window.control_ran; });
+      const control = document.createElement("div");
+      placeholder.append(control);
+      const controlWriter = control[method]({ runScripts: true }).getWriter();
+      await controlWriter.write(
+        `<script defer src="data:text/javascript,window.events.push('control-defer');"></` + `script>` +
+        `<script type="module" src="data:text/javascript,window.events.push('control-module');window.control_ran.resolve();{let cache_buster=${Math.random()}}"></` + `script>`
+      );
+      await controlWriter.close();
+      await failOnTimeout(window.control_ran.promise);
+      assert_array_equals(window.events, ["control-defer", "control-module"]);
     }, `element.${method} with defer/module scripts should not execute on abort`);
 
     promise_test(async (t) => {
