@@ -1,0 +1,67 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Link headers preload images with 2D imagesizes and h descriptors using normative source selection</title>
+<link rel="help" href="https://html.spec.whatwg.org/multipage/semantics.html#process-link-headers">
+<link rel="help" href="https://html.spec.whatwg.org/multipage/images.html#select-an-image-source-from-a-source-set">
+<link rel="help" href="https://html.spec.whatwg.org/multipage/images.html#normalise-the-source-densities">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="/preload/resources/preload_helper.js"></script>
+<body>
+<script>
+const dpr = window.devicePixelRatio;
+
+const urls = [
+  "resources/square.png?from-2d-header&base1",
+  "resources/square.png?from-2d-header&cover-0.5x",
+  "resources/square.png?from-2d-header&cover-1x",
+  "resources/square.png?from-2d-header&cover-2x",
+  "resources/square.png?from-2d-header&base2",
+  "resources/square.png?from-2d-header&contain-0.5x",
+  "resources/square.png?from-2d-header&contain-1x",
+  "resources/square.png?from-2d-header&contain-2x",
+  "resources/square.png?from-2d-header&base3",
+  "resources/square.png?from-2d-header&dup-first",
+  "resources/square.png?from-2d-header&dup-second",
+  "resources/square.png?from-2d-header&dup-2x",
+];
+
+const expected = new Map(urls.map(u => [u, 0]));
+
+if (dpr <= 0.5) {
+  expected.set("resources/square.png?from-2d-header&cover-0.5x", 1);
+  expected.set("resources/square.png?from-2d-header&contain-0.5x", 1);
+} else if (dpr <= 1) {
+  expected.set("resources/square.png?from-2d-header&cover-1x", 1);
+  expected.set("resources/square.png?from-2d-header&contain-1x", 1);
+} else {
+  expected.set("resources/square.png?from-2d-header&cover-2x", 1);
+  expected.set("resources/square.png?from-2d-header&contain-2x", 1);
+}
+
+if (dpr <= 1) {
+  expected.set("resources/square.png?from-2d-header&dup-first", 1);
+} else {
+  expected.set("resources/square.png?from-2d-header&dup-2x", 1);
+}
+
+promise_test(async t => {
+  await new Promise(resolve => {
+    if (document.readyState === "complete") {
+      resolve();
+    } else {
+      window.addEventListener("load", resolve, { once: true });
+    }
+  });
+  verifyPreloadAndRTSupport();
+
+  await t.step_wait(() => {
+    return urls.every(u => numberOfResourceTimingEntries(u) === expected.get(u));
+  }, "expected 2D Link header preloads completed", 5000, 100);
+
+  for (const [url, count] of expected) {
+    verifyNumberOfResourceTimingEntries(url, count);
+  }
+}, "Link header rel=preload with 2D imagesizes and srcset h descriptors selects the normative image candidate");
+</script>
+</body>

@@ -1,0 +1,632 @@
+<!doctype html>
+<meta charset=utf-8>
+<title>Normative image source selection with 2D sizes and height descriptors</title>
+<link rel=help href="https://html.spec.whatwg.org/multipage/images.html#select-an-image-source-from-a-source-set">
+<link rel=help href="https://html.spec.whatwg.org/multipage/images.html#normalise-the-source-densities">
+<link rel=help href="https://drafts.csswg.org/cssom-view/#determine-the-device-pixel-ratio">
+<link rel=help href="https://drafts.csswg.org/css-viewport/#zoom-om">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<body>
+<script>
+const dpr = window.devicePixelRatio;
+let nextId = 0;
+
+function candidateUrl(label, token) {
+  return new URL(`/images/green-16x16.png?id=${token}&candidate=${label}`, location.href).href;
+}
+
+function getSelectedCandidate(url) {
+  return new URL(url).searchParams.get('candidate');
+}
+
+// Computes an integer scale `u` such that `u / unitCount >= mult * ratio` when `mult >= 1`
+// and `u / unitCount < ratio` when `mult < 1`, at any floating-point devicePixelRatio.
+function scaleUnit(mult, unitCount, ratio = dpr) {
+  return mult >= 1
+    ? Math.ceil(unitCount * mult * ratio)
+    : Math.max(1, Math.floor(unitCount * mult * ratio));
+}
+
+// Returns `${w}w ${h}h` with exact aspect ratio `aspectW : aspectH`. On a box where
+// concreteWidth = `unitCount * aspectW`, the normalized density is `u / unitCount`.
+function pair(mult, aspectW, aspectH, unitCount, ratio = dpr) {
+  const u = scaleUnit(mult, unitCount, ratio);
+  return `${u * aspectW}w ${u * aspectH}h`;
+}
+
+function wOnly(mult, concreteWidth, ratio = dpr) {
+  return `${scaleUnit(mult, concreteWidth, ratio)}w`;
+}
+
+function exactDensity(mult, unitCount, ratio = dpr) {
+  return scaleUnit(mult, unitCount, ratio) / unitCount;
+}
+
+// Shared cases run on <img>, <picture><source>, and <link rel=preload>.
+const explicit2DTests = [
+  {
+    desc: 'cover 400px 400px with 3:2 h descriptors (concreteWidth=600px) selects exact 1x DPR match',
+    sizes: 'cover 400px 400px',
+    srcset: c => `${c('a')} ${pair(0.5, 3, 2, 200)}, ${c('b')} ${pair(1, 3, 2, 200)}, ${c('c')} ${pair(2, 3, 2, 200)}`,
+    expected: 'b',
+    expectedDensity: exactDensity(1, 200),
+  },
+  {
+    desc: 'cover 400px 400px with unsorted 3:2 h descriptors (concreteWidth=600px) sorts and selects smallest density >= DPR',
+    sizes: 'cover 400px 400px',
+    srcset: c => `${c('d')} ${pair(2, 3, 2, 200)}, ${c('a')} ${pair(0.5, 3, 2, 200)}, ${c('c')} ${pair(1.5, 3, 2, 200)}, ${c('b')} ${pair(0.75, 3, 2, 200)}`,
+    expected: 'c',
+    expectedDensity: exactDensity(1.5, 200),
+  },
+  {
+    desc: 'cover 400px 400px with unsorted 3:2 h descriptors selects highest density when all are < DPR',
+    sizes: 'cover 400px 400px',
+    srcset: c => `${c('c')} ${pair(0.75, 3, 2, 200)}, ${c('a')} ${pair(0.25, 3, 2, 200)}, ${c('b')} ${pair(0.5, 3, 2, 200)}`,
+    expected: 'c',
+    expectedDensity: exactDensity(0.75, 200),
+  },
+  {
+    desc: 'contain 800px 400px with 1:1 h descriptors (concreteWidth=400px) selects exact 1x DPR match',
+    sizes: 'contain 800px 400px',
+    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 400)}, ${c('b')} ${pair(1, 1, 1, 400)}, ${c('c')} ${pair(2, 1, 1, 400)}`,
+    expected: 'b',
+    expectedDensity: exactDensity(1, 400),
+  },
+  {
+    desc: 'contain 800px 400px with 1:1 h descriptors (concreteWidth=400px) selects smallest density >= DPR',
+    sizes: 'contain 800px 400px',
+    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 400)}, ${c('b')} ${pair(1.25, 1, 1, 400)}, ${c('c')} ${pair(2, 1, 1, 400)}`,
+    expected: 'b',
+    expectedDensity: exactDensity(1.25, 400),
+  },
+  {
+    desc: 'mixed aspect ratios in srcset where larger w has smaller normalized density (800w/800px=1x vs 600w/400px=1.5x)',
+    sizes: 'cover 400px 400px',
+    srcset: c => `${c('a')} ${pair(1, 2, 1, 400)}, ${c('b')} ${pair(1.5, 1, 1, 400)}`,
+    expected: 'a',
+    expectedDensity: exactDensity(1, 400),
+  },
+  {
+    desc: 'mixed aspect ratios in srcset where smaller w has larger normalized density (600w/800px=0.75x vs 400w/400px=1x)',
+    sizes: 'cover 400px 400px',
+    srcset: c => `${c('a')} ${pair(0.75, 2, 1, 400)}, ${c('b')} ${pair(1, 1, 1, 400)}`,
+    expected: 'b',
+    expectedDensity: exactDensity(1, 400),
+  },
+  {
+    desc: 'different w descriptors normalizing to equal 2D density deduplicate keeping first candidate (1:1 vs 2:1)',
+    sizes: 'cover 400px 400px',
+    srcset: c => `${c('first')} ${pair(1, 1, 1, 400)}, ${c('second')} ${pair(1, 2, 1, 400)}`,
+    expected: 'first',
+    expectedDensity: exactDensity(1, 400),
+  },
+  {
+    desc: 'different w descriptors normalizing to equal 2D density deduplicate keeping first candidate (2:1 vs 1:1)',
+    sizes: 'cover 400px 400px',
+    srcset: c => `${c('first')} ${pair(1, 2, 1, 400)}, ${c('second')} ${pair(1, 1, 1, 400)}`,
+    expected: 'first',
+    expectedDensity: exactDensity(1, 400),
+  },
+  {
+    desc: 'w+h candidate followed by x candidate with equal normalized density deduplicates keeping first',
+    sizes: 'cover 400px 400px',
+    srcset: c => `${c('first')} ${pair(1, 3, 2, 200)}, ${c('second')} ${exactDensity(1, 200)}x`,
+    expected: 'first',
+    expectedDensity: exactDensity(1, 200),
+  },
+  {
+    desc: 'x candidate followed by w+h candidate with equal normalized density deduplicates keeping first',
+    sizes: 'cover 400px 400px',
+    srcset: c => `${c('first')} ${exactDensity(1, 200)}x, ${c('second')} ${pair(1, 3, 2, 200)}`,
+    expected: 'first',
+    expectedDensity: exactDensity(1, 200),
+  },
+  {
+    desc: 'cover 0px 0px normalizes all w candidates to Infinity and deduplicates keeping first candidate',
+    sizes: 'cover 0px 0px',
+    srcset: c => `${c('first')} ${pair(2, 1, 1, 400)}, ${c('second')} ${pair(0.5, 1, 1, 400)}, ${c('third')} ${pair(1, 1, 1, 400)}`,
+    expected: 'first',
+    expectedZeroNaturalDims: true,
+  },
+  {
+    desc: 'contain 400px 0px (zero height) normalizes all w+h candidates to Infinity and deduplicates keeping first candidate',
+    sizes: 'contain 400px 0px',
+    srcset: c => `${c('first')} ${pair(2, 3, 2, 200)}, ${c('second')} ${pair(1, 3, 2, 200)}`,
+    expected: 'first',
+    expectedZeroNaturalDims: true,
+  },
+  {
+    desc: 'contain 0px 400px (zero width) normalizes all w+h candidates to Infinity and deduplicates keeping first candidate',
+    sizes: 'contain 0px 400px',
+    srcset: c => `${c('first')} ${pair(2, 3, 2, 200)}, ${c('second')} ${pair(1, 3, 2, 200)}`,
+    expected: 'first',
+    expectedZeroNaturalDims: true,
+  },
+  {
+    desc: 'cover 0px 400px with 3:2 h descriptors uses scaledWidth=600px (non-zero) and selects exact 1x DPR match',
+    sizes: 'cover 0px 400px',
+    srcset: c => `${c('a')} ${pair(0.5, 3, 2, 200)}, ${c('b')} ${pair(1, 3, 2, 200)}, ${c('c')} ${pair(2, 3, 2, 200)}`,
+    expected: 'b',
+    expectedDensity: exactDensity(1, 200),
+  },
+  {
+    desc: 'matching media condition before 2D source size selects normalized density from 2D entry',
+    sizes: '(min-width: 1px) cover 400px 400px, 1200px',
+    srcset: c => `${c('a')} ${pair(1, 3, 2, 200)}, ${c('b')} ${pair(2, 3, 2, 200)}`,
+    expected: 'a',
+    expectedDensity: exactDensity(1, 200),
+  },
+  {
+    desc: 'non-matching media condition before 2D source size falls back to next source size',
+    sizes: '(max-width: 0px) cover 400px 400px, 1200px',
+    srcset: c => `${c('a')} ${pair(1, 3, 2, 200)}, ${c('b')} ${pair(2, 3, 2, 200)}`,
+    expected: 'b',
+    expectedDensity: scaleUnit(2, 200) * 3 / 1200,
+  },
+];
+
+for (const tc of explicit2DTests) {
+  promise_test(async t => {
+    const token = ++nextId;
+    const c = label => candidateUrl(label, token);
+    const img = document.createElement('img');
+    t.add_cleanup(() => img.remove());
+    img.sizes = tc.sizes;
+    img.srcset = tc.srcset(c);
+    const loaded = new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error('img load failed'));
+    });
+    document.body.appendChild(img);
+    await loaded;
+    assert_equals(getSelectedCandidate(img.currentSrc), tc.expected);
+    if (tc.expectedZeroNaturalDims) {
+      assert_equals(img.naturalWidth, 0);
+      assert_equals(img.naturalHeight, 0);
+    } else if (tc.expectedDensity !== undefined) {
+      assert_equals(img.naturalWidth, Math.floor(16 / tc.expectedDensity));
+      assert_equals(img.naturalHeight, Math.floor(16 / tc.expectedDensity));
+    }
+  }, `<img>: ${tc.desc}`);
+
+  promise_test(async t => {
+    const token = ++nextId;
+    const c = label => candidateUrl(label, token);
+    const picture = document.createElement('picture');
+    const source = document.createElement('source');
+    const img = document.createElement('img');
+    t.add_cleanup(() => picture.remove());
+    source.sizes = tc.sizes;
+    source.srcset = tc.srcset(c);
+    picture.append(source, img);
+    const loaded = new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error('picture img load failed'));
+    });
+    document.body.appendChild(picture);
+    await loaded;
+    assert_equals(getSelectedCandidate(img.currentSrc), tc.expected);
+  }, `<picture><source>: ${tc.desc}`);
+
+  promise_test(async t => {
+    const token = ++nextId;
+    const c = label => candidateUrl(label, token);
+    const link = document.createElement('link');
+    t.add_cleanup(() => link.remove());
+    assert_implements(link.relList && link.relList.supports('preload'), 'preload not supported');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.imageSizes = tc.sizes;
+    link.imageSrcset = tc.srcset(c);
+    const loaded = new Promise((resolve, reject) => {
+      link.onload = resolve;
+      link.onerror = () => reject(new Error('link preload failed'));
+    });
+    document.head.appendChild(link);
+    await loaded;
+    const entries = performance.getEntriesByType('resource')
+      .filter(e => e.name.includes(`id=${token}&`));
+    assert_equals(entries.length, 1, 'exactly one candidate should be preloaded');
+    assert_equals(getSelectedCandidate(entries[0].name), tc.expected);
+  }, `<link rel=preload>: ${tc.desc}`);
+}
+
+// Dimension attribute aspect ratio & invalid h-descriptor fallback tests.
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  const img = document.createElement('img');
+  t.add_cleanup(() => img.remove());
+  img.width = 600;
+  img.height = 400;
+  img.sizes = 'cover 400px 400px';
+  img.srcset = `${c('a')} ${wOnly(0.5, 600)}, ${c('b')} ${wOnly(1, 600)}, ${c('c')} ${wOnly(2, 600)}`;
+  const loaded = new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('img load failed'));
+  });
+  document.body.appendChild(img);
+  await loaded;
+  assert_equals(getSelectedCandidate(img.currentSrc), 'b');
+}, '<img> with width/height attributes (3:2) and cover 400px 400px selects exact 1x DPR candidate');
+
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  const img = document.createElement('img');
+  t.add_cleanup(() => img.remove());
+  // Default aspect ratio from width/height is 1:1 (concreteWidth=400px),
+  // while candidate 'a' has an explicit 2:1 h descriptor (concreteWidth=800px).
+  img.width = 400;
+  img.height = 400;
+  img.sizes = 'cover 400px 400px';
+  img.srcset = `${c('a')} ${pair(1, 2, 1, 400)}, ${c('b')} ${wOnly(1.5, 400)}`;
+  const loaded = new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('img load failed'));
+  });
+  document.body.appendChild(img);
+  await loaded;
+  assert_equals(getSelectedCandidate(img.currentSrc), 'a');
+}, '<img> with mixed h-descriptor and fallback dimension-attribute aspect ratio normalizes each candidate independently');
+
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  const picture = document.createElement('picture');
+  const source = document.createElement('source');
+  const img = document.createElement('img');
+  t.add_cleanup(() => picture.remove());
+  source.setAttribute('width', '600');
+  source.setAttribute('height', '400');
+  source.sizes = 'cover 400px 400px';
+  source.srcset = `${c('a')} ${wOnly(0.5, 600)}, ${c('b')} ${wOnly(1, 600)}, ${c('c')} ${wOnly(2, 600)}`;
+  img.width = 400;
+  img.height = 400;
+  picture.append(source, img);
+  const loaded = new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('picture img load failed'));
+  });
+  document.body.appendChild(picture);
+  await loaded;
+  assert_equals(getSelectedCandidate(img.currentSrc), 'b');
+}, '<picture><source> with width/height attributes overrides <img> aspect ratio for normative 2D selection');
+
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  const picture = document.createElement('picture');
+  const source = document.createElement('source');
+  const img = document.createElement('img');
+  t.add_cleanup(() => picture.remove());
+  source.sizes = 'cover 400px 400px';
+  source.srcset = `${c('a')} ${wOnly(0.5, 600)}, ${c('b')} ${wOnly(1, 600)}, ${c('c')} ${wOnly(2, 600)}`;
+  img.width = 600;
+  img.height = 400;
+  picture.append(source, img);
+  const loaded = new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('picture img load failed'));
+  });
+  document.body.appendChild(picture);
+  await loaded;
+  assert_equals(getSelectedCandidate(img.currentSrc), 'b');
+}, '<picture><source> without width/height attributes inherits <img> aspect ratio for normative 2D selection');
+
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  const img = document.createElement('img');
+  t.add_cleanup(() => img.remove());
+  img.sizes = 'cover 400px 400px';
+  img.srcset = `${c('bare-h')} 400h, ${c('zero-h')} 400w 0h, ${c('neg-h')} 400w -100h, ${c('float-h')} 400w 1.5h`;
+  img.src = c('fallback');
+  const loaded = new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('img load failed'));
+  });
+  document.body.appendChild(img);
+  await loaded;
+  assert_equals(getSelectedCandidate(img.currentSrc), 'fallback');
+}, '<img> srcset with only invalid h descriptors falls back to src as 1x default source');
+
+// Normative cache & deduplication invariants with 2D source sizes.
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  const cachedLow = c('cached-low');
+  const uncachedExact = c('uncached-exact');
+
+  const warm = document.createElement('img');
+  t.add_cleanup(() => warm.remove());
+  await new Promise((resolve, reject) => {
+    warm.onload = resolve;
+    warm.onerror = () => reject(new Error('warm img failed'));
+    warm.src = cachedLow;
+    document.body.appendChild(warm);
+  });
+
+  const img = document.createElement('img');
+  t.add_cleanup(() => img.remove());
+  img.sizes = 'cover 400px 400px';
+  img.srcset = `${cachedLow} ${pair(0.5, 3, 2, 200)}, ${uncachedExact} ${pair(1, 3, 2, 200)}`;
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('img load failed'));
+    document.body.appendChild(img);
+  });
+  assert_equals(img.currentSrc, uncachedExact);
+}, 'cached lower-density 2D candidate is never preferred over candidate >= devicePixelRatio');
+
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  const uncachedFirst = c('uncached-first');
+  const cachedDupSecond = c('cached-dup-second');
+
+  const warm = document.createElement('img');
+  t.add_cleanup(() => warm.remove());
+  await new Promise((resolve, reject) => {
+    warm.onload = resolve;
+    warm.onerror = () => reject(new Error('warm img failed'));
+    warm.src = cachedDupSecond;
+    document.body.appendChild(warm);
+  });
+
+  // 1:1 on cover 400x400 (concreteWidth=400) and 2:1 on cover 400x400 (concreteWidth=800)
+  // have different w descriptors yet normalize to the exact same 2D density.
+  const img = document.createElement('img');
+  t.add_cleanup(() => img.remove());
+  img.sizes = 'cover 400px 400px';
+  img.srcset = `${uncachedFirst} ${pair(1, 1, 1, 400)}, ${cachedDupSecond} ${pair(1, 2, 1, 400)}`;
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('img load failed'));
+    document.body.appendChild(img);
+  });
+  assert_equals(img.currentSrc, uncachedFirst);
+}, 'cached duplicate candidate at equal normalized 2D density (different w/h) does not override earlier uncached candidate');
+
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  const uncached1x = c('uncached-1x');
+  const cached2x = c('cached-2x');
+  const uncached3x = c('uncached-3x');
+
+  const warm = document.createElement('img');
+  t.add_cleanup(() => warm.remove());
+  await new Promise((resolve, reject) => {
+    warm.onload = resolve;
+    warm.onerror = () => reject(new Error('warm img failed'));
+    warm.src = cached2x;
+    document.body.appendChild(warm);
+  });
+
+  const img = document.createElement('img');
+  t.add_cleanup(() => img.remove());
+  img.sizes = 'cover 400px 400px';
+  img.srcset = `${uncached1x} ${pair(1, 3, 2, 200)}, ${cached2x} ${pair(2, 3, 2, 200)}, ${uncached3x} ${pair(3, 3, 2, 200)}`;
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('img load failed'));
+    document.body.appendChild(img);
+  });
+  assert_in_array(img.currentSrc, [uncached1x, cached2x]);
+}, 'cached mid-density 2D candidate never causes selection of higher uncached 2D candidate');
+
+// CSS 'zoom' interaction with 2D source selection.
+function createZoomedIframe(t, zoom, srcdoc) {
+  return new Promise(resolve => {
+    const iframe = document.createElement('iframe');
+    t.add_cleanup(() => iframe.remove());
+    iframe.style.zoom = String(zoom);
+    document.body.appendChild(iframe);
+    iframe.offsetWidth;
+    iframe.addEventListener('load', () => resolve(iframe), { once: true });
+    iframe.srcdoc = srcdoc;
+  });
+}
+
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  const wrapper = document.createElement('div');
+  wrapper.style.zoom = '2';
+  t.add_cleanup(() => wrapper.remove());
+  const img = document.createElement('img');
+  img.style.zoom = '2';
+  img.sizes = 'cover 400px 400px';
+  img.srcset = `${c('exact')} ${pair(1, 3, 2, 200)}, ${c('double')} ${pair(2, 3, 2, 200)}`;
+  const loaded = new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('img load failed'));
+  });
+  wrapper.appendChild(img);
+  document.body.appendChild(wrapper);
+  await loaded;
+  assert_equals(getSelectedCandidate(img.currentSrc), 'exact');
+}, 'CSS zoom on img and ancestor does not scale target devicePixelRatio for explicit 2D sizes');
+
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  const iframe = await createZoomedIframe(t, 2, `<!doctype html>
+    <img sizes="cover 400px 400px"
+         srcset="${c('1x')} ${pair(1, 3, 2, 200)}, ${c('2x')} ${pair(2, 3, 2, 200)}, ${c('4x')} ${pair(4, 3, 2, 200)}">`);
+  assert_equals(iframe.contentWindow.devicePixelRatio, 2 * dpr);
+  const img = iframe.contentDocument.querySelector('img');
+  assert_equals(getSelectedCandidate(img.currentSrc), '2x');
+}, 'zoomed-in iframe (zoom: 2) with 2D sizes and h descriptors selects candidate matching zoomed devicePixelRatio');
+
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  const iframe = await createZoomedIframe(t, 1.1, '<!doctype html><body></body>');
+  const childDpr = iframe.contentWindow.devicePixelRatio;
+  assert_greater_than(childDpr, dpr);
+
+  const img = iframe.contentDocument.createElement('img');
+  img.sizes = 'cover 400px 400px';
+  img.srcset = `${c('low')} ${pair(0.75, 3, 2, 200, childDpr)}, ${c('exact')} ${pair(1, 3, 2, 200, childDpr)}, ${c('high')} ${pair(2, 3, 2, 200, childDpr)}`;
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('fractional zoom img load failed'));
+    iframe.contentDocument.body.appendChild(img);
+  });
+  assert_equals(getSelectedCandidate(img.currentSrc), 'exact');
+}, 'fractional-zoom iframe (zoom: 1.1) with 2D sizes and h descriptors selects smallest candidate >= fractional devicePixelRatio');
+
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  // With contain 800px 100px and width=100 height=100 (1:1), concreteWidth=100px so 'small' (1x*dpr) is selected.
+  // Removing `height` clears the dimension attribute aspect ratio so concreteWidth falls back to 800px,
+  // re-normalizing 'small' below DPR and selecting 'large' (1x*dpr at 800px) without mutating srcset.
+  const img = document.createElement('img');
+  t.add_cleanup(() => img.remove());
+  img.width = 100;
+  img.height = 100;
+  img.sizes = 'contain 800px 100px';
+  img.srcset = `${c('small')} ${wOnly(1, 100)}, ${c('large')} ${wOnly(1, 800)}`;
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('initial load failed'));
+    document.body.appendChild(img);
+  });
+  assert_equals(getSelectedCandidate(img.currentSrc), 'small');
+
+  const reloaded = new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('reload after removeAttribute failed'));
+  });
+  img.removeAttribute('height');
+  await reloaded;
+  assert_equals(getSelectedCandidate(img.currentSrc), 'large');
+}, 'removing height attribute on img with contain 2D sizes clears aspect ratio and re-selects wider DPR-matching candidate');
+
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  const iframe = await createZoomedIframe(t, 0.5, `<!doctype html>
+    <img sizes="contain 800px 400px"
+         srcset="${c('half')} ${pair(1, 1, 1, 400, 0.5 * dpr)}, ${c('1x')} ${pair(1, 1, 1, 400)}, ${c('2x')} ${pair(2, 1, 1, 400)}">`);
+  assert_equals(iframe.contentWindow.devicePixelRatio, 0.5 * dpr);
+  const img = iframe.contentDocument.querySelector('img');
+  assert_equals(getSelectedCandidate(img.currentSrc), 'half');
+}, 'zoomed-out iframe (zoom: 0.5) with 2D sizes and h descriptors selects candidate matching zoomed devicePixelRatio');
+
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  const iframe = await createZoomedIframe(t, 2, '<!doctype html><body></body>');
+  assert_equals(iframe.contentWindow.devicePixelRatio, 2 * dpr);
+
+  const link = iframe.contentDocument.createElement('link');
+  assert_implements(link.relList && link.relList.supports('preload'), 'preload not supported');
+  link.rel = 'preload';
+  link.as = 'image';
+  link.imageSizes = 'cover 400px 400px';
+  link.imageSrcset = `${c('1x')} ${pair(1, 3, 2, 200)}, ${c('2x')} ${pair(2, 3, 2, 200)}, ${c('4x')} ${pair(4, 3, 2, 200)}`;
+
+  await new Promise((resolve, reject) => {
+    link.onload = resolve;
+    link.onerror = () => reject(new Error('preload error'));
+    iframe.contentDocument.body.appendChild(link);
+  });
+
+  const entries = iframe.contentWindow.performance.getEntriesByType('resource')
+    .filter(e => e.name.includes(`id=${token}&`));
+  assert_equals(entries.length, 1, 'exactly one candidate should be preloaded');
+  assert_equals(getSelectedCandidate(entries[0].name), '2x');
+}, 'link rel=preload with 2D imagesizes and h descriptors in zoomed iframe selects candidate matching zoomed devicePixelRatio');
+
+// sizes="auto" with object-fit normative selection tests on both <img> and <picture><source>.
+const auto2DTests = [
+  {
+    desc: 'sizes="auto" with object-fit: cover on 100px x 100px box and 3:2 candidates (concreteWidth=150px) selects 1x DPR candidate',
+    style: 'width: 100px; height: 100px; object-fit: cover',
+    srcset: c => `${c('a')} ${pair(0.5, 3, 2, 50)}, ${c('b')} ${pair(1, 3, 2, 50)}, ${c('c')} ${pair(2, 3, 2, 50)}`,
+    expected: 'b',
+  },
+  {
+    desc: 'sizes="auto" with object-fit: cover on 100px x 100px box and 3:2 candidates selects smallest density >= DPR (1.5x)',
+    style: 'width: 100px; height: 100px; object-fit: cover',
+    srcset: c => `${c('a')} ${pair(0.5, 3, 2, 50)}, ${c('b')} ${pair(0.75, 3, 2, 50)}, ${c('c')} ${pair(1.5, 3, 2, 50)}, ${c('d')} ${pair(2, 3, 2, 50)}`,
+    expected: 'c',
+  },
+  {
+    desc: 'sizes="auto" with object-fit: contain on 200px x 100px box and 1:1 candidates (concreteWidth=100px) selects 1x DPR candidate',
+    style: 'width: 200px; height: 100px; object-fit: contain',
+    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 100)}, ${c('b')} ${pair(1, 1, 1, 100)}, ${c('c')} ${pair(2, 1, 1, 100)}`,
+    expected: 'b',
+  },
+  {
+    desc: 'sizes="auto" with object-fit: scale-down on 200px x 100px box and 1:1 candidates (concreteWidth=100px) selects 1x DPR candidate',
+    style: 'width: 200px; height: 100px; object-fit: scale-down',
+    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 100)}, ${c('b')} ${pair(1, 1, 1, 100)}, ${c('c')} ${pair(2, 1, 1, 100)}`,
+    expected: 'b',
+  },
+  {
+    desc: 'sizes="auto" with object-fit: fill on 200px x 100px box and 1:1 candidates (concreteWidth=200px) selects 1x DPR candidate',
+    style: 'width: 200px; height: 100px; object-fit: fill',
+    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 100)}, ${c('b')} ${pair(1, 1, 1, 100)}, ${c('c')} ${pair(1, 1, 1, 200)}`,
+    expected: 'c',
+  },
+  {
+    desc: 'sizes="auto" with object-fit: none on 200px x 100px box and 1:1 candidates (concreteWidth=200px) selects 1x DPR candidate',
+    style: 'width: 200px; height: 100px; object-fit: none',
+    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 100)}, ${c('b')} ${pair(1, 1, 1, 100)}, ${c('c')} ${pair(1, 1, 1, 200)}`,
+    expected: 'c',
+  },
+  {
+    desc: 'sizes="auto" with object-fit: contain on 100px x 0px box (concreteWidth=0px) normalizes to Infinity and keeps first candidate',
+    style: 'width: 100px; height: 0px; object-fit: contain',
+    srcset: c => `${c('first')} ${pair(2, 1, 1, 100)}, ${c('second')} ${pair(1, 1, 1, 100)}`,
+    expected: 'first',
+  },
+];
+
+for (const tc of auto2DTests) {
+  promise_test(async t => {
+    const token = ++nextId;
+    const c = label => candidateUrl(label, token);
+    const img = document.createElement('img');
+    t.add_cleanup(() => img.remove());
+    img.loading = 'lazy';
+    img.sizes = 'auto';
+    img.style.cssText = tc.style;
+    img.srcset = tc.srcset(c);
+    const loaded = new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error('img load failed'));
+    });
+    document.body.appendChild(img);
+    await loaded;
+    assert_equals(getSelectedCandidate(img.currentSrc), tc.expected);
+  }, `<img>: ${tc.desc}`);
+
+  promise_test(async t => {
+    const token = ++nextId;
+    const c = label => candidateUrl(label, token);
+    const picture = document.createElement('picture');
+    const source = document.createElement('source');
+    const img = document.createElement('img');
+    t.add_cleanup(() => picture.remove());
+    img.loading = 'lazy';
+    img.sizes = 'auto';
+    img.style.cssText = tc.style;
+    source.srcset = tc.srcset(c);
+    picture.append(source, img);
+    const loaded = new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error('picture img load failed'));
+    });
+    document.body.appendChild(picture);
+    await loaded;
+    assert_equals(getSelectedCandidate(img.currentSrc), tc.expected);
+  }, `<picture><source>: ${tc.desc}`);
+}
+</script>
