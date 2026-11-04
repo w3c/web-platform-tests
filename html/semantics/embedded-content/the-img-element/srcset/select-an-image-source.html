@@ -273,13 +273,31 @@ promise_test(async t => {
 }, "CSS zoom on the img element itself does not scale x-descriptor target density");
 
 promise_test(async t => {
+  const exact = imageUrl("ancestor-zoom-exact");
+  const double = imageUrl("ancestor-zoom-double");
+  const wrapper = document.createElement("div");
+  wrapper.style.zoom = "2";
+  t.add_cleanup(() => wrapper.remove());
+  const img = document.createElement("img");
+  const settled = new Promise((resolve, reject) => {
+    img.addEventListener("load", resolve, { once: true });
+    img.addEventListener("error", () => reject(new Error("img load error")), { once: true });
+  });
+  img.srcset = `${exact} ${1 * dpr}x, ${double} ${2 * dpr}x`;
+  wrapper.appendChild(img);
+  document.body.appendChild(wrapper);
+  await settled;
+  assert_equals(img.currentSrc, exact);
+}, "CSS zoom on an ancestor element does not scale x-descriptor target density");
+
+promise_test(async t => {
   const zero = imageUrl("zero-x");
   const exact = imageUrl("zero-exact");
   const selected = await selectImg(t, {
     srcset: `${zero} 0x, ${exact} ${1 * dpr}x`,
   });
   assert_equals(selected, exact);
-}, "0x descriptor is valid and skipped when higher candidate >= devicePixelRatio exists");
+}, "0x descriptor is parsed and skipped when higher candidate >= devicePixelRatio exists");
 
 promise_test(async t => {
   const onlyZero = imageUrl("only-zero-x");
@@ -328,8 +346,8 @@ promise_test(async t => {
 }, "w descriptors with sizes=0px (wider first): both normalize to Infinity and earliest wins deduplication");
 
 promise_test(async t => {
-  const w1 = Math.round(100 * dpr);
-  const w2 = Math.round(200 * dpr);
+  const w1 = Math.ceil(100 * dpr);
+  const w2 = Math.ceil(200 * dpr);
   const u1 = imageUrl("sizes-mq-100");
   const u2 = imageUrl("sizes-mq-200");
 
@@ -432,7 +450,7 @@ promise_test(async t => {
 
   const s4 = document.createElement("source");
   s4.sizes = "100px";
-  s4.srcset = `${validMatch} ${Math.round(100 * dpr)}w, ${validLow} ${Math.round(50 * dpr)}w, ${validDup} ${Math.round(100 * dpr)}w`;
+  s4.srcset = `${validMatch} ${Math.ceil(100 * dpr)}w, ${validLow} ${Math.round(50 * dpr)}w, ${validDup} ${Math.ceil(100 * dpr)}w`;
 
   const img = document.createElement("img");
   img.src = fallback;
@@ -472,8 +490,8 @@ promise_test(async t => {
 }, "dynamically updating srcset re-runs image source selection");
 
 promise_test(async t => {
-  const w1 = Math.round(100 * dpr);
-  const w2 = Math.round(200 * dpr);
+  const w1 = Math.ceil(100 * dpr);
+  const w2 = Math.ceil(200 * dpr);
   const u1 = imageUrl("dyn-sizes-100w");
   const u2 = imageUrl("dyn-sizes-200w");
 

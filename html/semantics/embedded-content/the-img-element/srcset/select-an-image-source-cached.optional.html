@@ -68,8 +68,8 @@ promise_test(async t => {
 promise_test(async t => {
   const uncached100w = imageUrl("uncached-100w");
   const cached200w = imageUrl("cached-200w");
-  const w1 = Math.round(100 * dpr);
-  const w2 = Math.round(200 * dpr);
+  const w1 = Math.ceil(100 * dpr);
+  const w2 = Math.ceil(200 * dpr);
 
   await loadImg(t, { src: cached200w });
 
@@ -158,8 +158,9 @@ promise_test(async t => {
   assert_equals(img.currentSrc, initialSrc);
 
   img.srcset = `${uncachedMatch} ${1 * dpr}x, ${initialSrc} ${2 * dpr}x`;
-  await new Promise(resolve => t.step_timeout(resolve, 50));
+  await new Promise(resolve => t.step_timeout(resolve, 0));
 
+  assert_true(img.complete);
   assert_equals(img.currentSrc, initialSrc);
   assert_equals(performance.getEntriesByName(uncachedMatch).length, 0);
 }, "keeps element's already-loaded src when srcset is added with that URL at higher density");
@@ -194,8 +195,9 @@ promise_test(async t => {
   // In a zoom = 0.5 / dpr iframe, devicePixelRatio is 0.5. Setting srcset="... 0.5x"
   // leaves the existing src attribute in the source set as the 1x default source (> 0.5x).
   img.srcset = `${uncachedHalf} 0.5x`;
-  await new Promise(resolve => t.step_timeout(resolve, 50));
+  await new Promise(resolve => t.step_timeout(resolve, 0));
 
+  assert_true(img.complete);
   assert_equals(img.currentSrc, initialSrc);
   assert_equals(iframe.contentWindow.performance.getEntriesByName(uncachedHalf).length, 0);
 }, "keeps element's already-loaded default src (1x) when srcset adds an uncached sub-1x candidate matching zoomed-out DPR");
@@ -210,8 +212,9 @@ promise_test(async t => {
   assert_equals(img.currentSrc, initial2x);
 
   img.srcset = `${uncachedMatch} ${1 * dpr}x, ${initial2x} ${2 * dpr}x`;
-  await new Promise(resolve => t.step_timeout(resolve, 50));
+  await new Promise(resolve => t.step_timeout(resolve, 0));
 
+  assert_true(img.complete);
   assert_equals(img.currentSrc, initial2x);
   assert_equals(performance.getEntriesByName(uncachedMatch).length, 0);
 }, "keeps element's already-loaded higher-density srcset candidate when an uncached 1x candidate is added");
@@ -245,8 +248,9 @@ promise_test(async t => {
 
   // Setting src adds a 1x default candidate to the source set, while initial2x (2x) is already loaded.
   img.src = uncachedDefaultSrc;
-  await new Promise(resolve => t.step_timeout(resolve, 50));
+  await new Promise(resolve => t.step_timeout(resolve, 0));
 
+  assert_true(img.complete);
   assert_equals(img.currentSrc, initial2x);
   assert_equals(iframe.contentWindow.performance.getEntriesByName(uncachedDefaultSrc).length, 0);
 }, "keeps element's already-loaded 2x srcset candidate when an uncached src (1x default source) is set");
@@ -254,8 +258,8 @@ promise_test(async t => {
 promise_test(async t => {
   const uncached100w = imageUrl("uncached-100w-resize");
   const cached200w = imageUrl("cached-200w-resize");
-  const w1 = Math.round(100 * dpr);
-  const w2 = Math.round(200 * dpr);
+  const w1 = Math.ceil(100 * dpr);
+  const w2 = Math.ceil(200 * dpr);
 
   // At sizes=200px, w1 is 0.5*dpr (< dpr) and w2 is 1*dpr (>= dpr), so w2 is normatively selected.
   const img = await loadImg(t, {
@@ -267,8 +271,9 @@ promise_test(async t => {
 
   // Shrinking sizes to 100px makes w1 = 1*dpr and w2 = 2*dpr; w2 is already loaded and kept.
   img.sizes = "100px";
-  await new Promise(resolve => t.step_timeout(resolve, 50));
+  await new Promise(resolve => t.step_timeout(resolve, 0));
 
+  assert_true(img.complete);
   assert_equals(img.currentSrc, cached200w);
   assert_equals(performance.getEntriesByName(uncached100w).length, 0);
 }, "keeps element's already-loaded wider w-descriptor candidate when sizes shrinks");

@@ -94,9 +94,9 @@ promise_test(async t => {
 }, "link rel=preload imagesrcset in zoomed iframe selects candidate matching zoomed devicePixelRatio");
 
 promise_test(async t => {
-  const w1 = Math.round(100 * parentDpr);
-  const w2 = Math.round(200 * parentDpr);
-  const w4 = Math.round(400 * parentDpr);
+  const w1 = Math.ceil(100 * parentDpr);
+  const w2 = Math.ceil(200 * parentDpr);
+  const w4 = Math.ceil(400 * parentDpr);
   const u1 = imageUrl("zoom2-w1");
   const u2 = imageUrl("zoom2-w2");
   const u4 = imageUrl("zoom2-w4");

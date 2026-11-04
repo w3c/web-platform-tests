@@ -194,7 +194,7 @@ promise_test(async t => {
   await preloadAndVerify(t, {
     href: hrefDefault,
     imagesizes: "100px",
-    imagesrcset: `${wMatch} ${Math.round(100 * dpr)}w, ${wHigh} ${Math.round(200 * dpr)}w`,
+    imagesrcset: `${wMatch} ${Math.ceil(100 * dpr)}w, ${wHigh} ${Math.ceil(200 * dpr)}w`,
   }, wMatch, [hrefDefault, wMatch, wHigh]);
 }, "preload href is ignored when imagesrcset uses width descriptors");
 </script>
