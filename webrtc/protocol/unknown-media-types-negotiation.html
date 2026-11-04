@@ -141,6 +141,80 @@ promise_test(async t => {
                 `each m= section needs its own mid, got ${mids.join(', ')}`);
 }, 'A mid used by a rejected unknown m= section is not given to another m= section');
 
+// [RFC9429] section 5.2.2 requires an m= section with a zero port to be
+// recycled for an added transceiver, at the same index and "including a new MID
+// value". The mid the rejected m= section was using is therefore not available
+// to the m= section that replaces it either.
+promise_test(async t => {
+  const {level, rejectedMid, reoffer} =
+      await rejectUnknownMediaTypeThenAddTransceiver(t);
+
+  const recycled = SDPUtils.getMediaSections(reoffer.sdp)[level];
+  assert_not_equals(SDPUtils.getKind(recycled), 'unicorns',
+                    'the rejected m= section is recycled for the transceiver');
+  assert_not_equals(SDPUtils.getMid(recycled), rejectedMid,
+                    'the recycled m= section is given a new mid');
+}, 'A recycled m= section does not reuse the mid of the m= section it replaced');
+
+// Negotiates audio plus a media type neither endpoint knows, which the answerer
+// has to reject with a zero port, leaving it stable with that m= section
+// rejected in its local description and offered in its remote description.
+//
+// Returns the answerer and the offer it was given.
+async function rejectUnknownMediaType(t) {
+  const offerer = new RTCPeerConnection();
+  const answerer = new RTCPeerConnection();
+  t.add_cleanup(() => offerer.close());
+  t.add_cleanup(() => answerer.close());
+
+  offerer.addTransceiver('audio');
+  offerer.addTransceiver('video');
+  const offer = await offerer.createOffer();
+  const sdp = offer.sdp.replace('m=video ', 'm=unicorns ');
+  await answerer.setRemoteDescription({type: 'offer', sdp});
+  await answerer.setLocalDescription(await answerer.createAnswer());
+  return [answerer, sdp];
+}
+
+// [RFC9429] section 5.2.2 lets an offerer recycle an m= section that has a zero
+// port in the current local or the current remote description, generating it
+// afresh with a new MID value, which means the media type at that index can
+// change. An m= section rejected because its media type was unknown is rejected
+// in the answerer's local description, so the offerer may reuse it.
+promise_test(async t => {
+
+  // Recycling an m= section means generating it afresh, so give it a new mid
+  // and carry that through the bundle group, as an offerer would.
+  const recycleAs = (sdp, media) => {
+    const sections = SDPUtils.getMediaSections(sdp);
+    const oldMid = SDPUtils.getMid(
+        sections.find(section => SDPUtils.getKind(section) === 'unicorns'));
+    const newMid = 'recycled';
+    assert_false(sections.some(section => SDPUtils.getMid(section) === newMid),
+                 'the new mid is not already in use');
+    return sdp.replace('m=unicorns ', `m=${media} `)
+        .replace(`a=mid:${oldMid}\r\n`, `a=mid:${newMid}\r\n`)
+        .replace(/^a=group:BUNDLE[^\r\n]*/m,
+                 group => group.split(' ')
+                              .map(token => token === oldMid ? newMid : token)
+                              .join(' '));
+  };
+
+  // Control: the same m= sections offered again are accepted.
+  const [control, controlSdp] = await rejectUnknownMediaType(t);
+  await control.setRemoteDescription({type: 'offer', sdp: controlSdp});
+
+  // Recycled for a media type we do know.
+  const [known, knownSdp] = await rejectUnknownMediaType(t);
+  await known.setRemoteDescription(
+      {type: 'offer', sdp: recycleAs(knownSdp, 'audio')});
+
+  // Recycled for another media type we do not know.
+  const [unknown, unknownSdp] = await rejectUnknownMediaType(t);
+  await unknown.setRemoteDescription(
+      {type: 'offer', sdp: recycleAs(unknownSdp, 'dragons')});
+}, 'An m= section rejected for an unknown media type may be recycled by the offerer');
+
 // Test that when endpoints have an asymmetric comprehension of unknown media
 // types, we can still negotiate with them.
 // Introduce a disagreement by rewriting the offer on its way to the answerer
