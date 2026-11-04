@@ -1,0 +1,184 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>HTMLImageElement: imageWidth, imageHeight, and imageAspectRatio</title>
+<link rel="help" href="https://github.com/whatwg/html/issues/12565">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<body>
+<script>
+function loadImage(props) {
+  return new Promise((resolve, reject) => {
+    const img = document.createElement("img");
+    if (props.style) {
+      img.style.cssText = props.style;
+    }
+    if (props.sizes) {
+      img.sizes = props.sizes;
+    }
+    if (props.srcset) {
+      img.srcset = props.srcset;
+    }
+    if (props.src) {
+      img.src = props.src;
+    }
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(img);
+    document.body.appendChild(img);
+  });
+}
+
+test(() => {
+  const img = document.createElement("img");
+  assert_equals(img.imageWidth, 0, "imageWidth");
+  assert_equals(img.imageHeight, 0, "imageHeight");
+  assert_equals(img.imageAspectRatio, 0, "imageAspectRatio");
+}, "Newly created <img> without source returns 0 for imageWidth, imageHeight, and imageAspectRatio");
+
+promise_test(async t => {
+  const img = await new Promise(resolve => {
+    const el = document.createElement("img");
+    el.src = "resources/non-existent.jpg";
+    el.onload = t.unreached_func("broken image should not load");
+    el.onerror = () => resolve(el);
+    document.body.appendChild(el);
+  });
+  t.add_cleanup(() => img.remove());
+  assert_equals(img.imageWidth, 0, "imageWidth");
+  assert_equals(img.imageHeight, 0, "imageHeight");
+  assert_equals(img.imageAspectRatio, 0, "imageAspectRatio");
+}, "Broken <img> returns 0 for imageWidth, imageHeight, and imageAspectRatio");
+
+promise_test(async t => {
+  const img = await loadImage({ src: "/images/green-100x50.png" });
+  t.add_cleanup(() => img.remove());
+  assert_equals(img.naturalWidth, 100, "naturalWidth");
+  assert_equals(img.naturalHeight, 50, "naturalHeight");
+  assert_equals(img.imageWidth, 100, "imageWidth");
+  assert_equals(img.imageHeight, 50, "imageHeight");
+  assert_equals(img.imageAspectRatio, 2, "imageAspectRatio");
+}, "Raster image loaded via src exposes natural dimensions and aspect ratio");
+
+promise_test(async t => {
+  const img = await loadImage({ src: "resources/cat.jpg" });
+  t.add_cleanup(() => img.remove());
+  assert_equals(img.imageWidth, 320, "imageWidth");
+  assert_equals(img.imageHeight, 240, "imageHeight");
+  assert_approx_equals(img.imageAspectRatio, 320 / 240, 1e-6, "imageAspectRatio");
+}, "Non-integer aspect ratio (320x240) is exposed as a double");
+
+promise_test(async t => {
+  const img = await loadImage({ srcset: "/images/green-100x50.png 2x" });
+  t.add_cleanup(() => img.remove());
+  assert_equals(img.naturalWidth, 50, "naturalWidth is divided by pixel density");
+  assert_equals(img.naturalHeight, 25, "naturalHeight is divided by pixel density");
+  assert_equals(img.imageWidth, 100, "imageWidth is unaffected by pixel density");
+  assert_equals(img.imageHeight, 50, "imageHeight is unaffected by pixel density");
+  assert_equals(img.imageAspectRatio, 2, "imageAspectRatio");
+}, "Raster image with 2x srcset density descriptor returns unscaled imageWidth and imageHeight");
+
+promise_test(async t => {
+  const img = await loadImage({ srcset: "/images/green-100x50.png 4x" });
+  t.add_cleanup(() => img.remove());
+  assert_equals(img.naturalWidth, 25, "naturalWidth is divided by 4");
+  assert_equals(img.naturalHeight, 12, "naturalHeight is truncated to integer (50 / 4 -> 12)");
+  assert_equals(img.imageWidth, 100, "imageWidth is exact unscaled width");
+  assert_equals(img.imageHeight, 50, "imageHeight is exact unscaled height");
+  assert_equals(img.imageAspectRatio, 2, "imageAspectRatio is exact (not 25 / 12)");
+}, "Raster image with 4x srcset density descriptor preserves exact imageHeight and imageAspectRatio without truncation");
+
+promise_test(async t => {
+  const img = await loadImage({
+    srcset: "/images/green-100x50.png 100w",
+    sizes: "25px"
+  });
+  t.add_cleanup(() => img.remove());
+  assert_equals(img.imageWidth, 100, "imageWidth");
+  assert_equals(img.imageHeight, 50, "imageHeight");
+  assert_equals(img.imageAspectRatio, 2, "imageAspectRatio");
+}, "Raster image with width descriptor and sizes returns unscaled imageWidth, imageHeight, and imageAspectRatio");
+
+const svgTests = [
+  {
+    name: "SVG with no width, height, or viewBox returns 0 for imageWidth, imageHeight, and imageAspectRatio (no 300x150 fallback)",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg'></svg>",
+    expected: { naturalWidth: 300, naturalHeight: 150, imageWidth: 0, imageHeight: 0, imageAspectRatio: 0 }
+  },
+  {
+    name: "SVG with viewBox only returns 0 for imageWidth and imageHeight but exposes imageAspectRatio",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 200'></svg>",
+    expected: { naturalWidth: 300, naturalHeight: 100, imageWidth: 0, imageHeight: 0, imageAspectRatio: 3 }
+  },
+  {
+    name: "SVG with percentage width and height and viewBox returns 0 for imageWidth and imageHeight but exposes imageAspectRatio",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' width='50%' height='25%' viewBox='0 0 600 200'></svg>",
+    expected: { naturalWidth: 300, naturalHeight: 100, imageWidth: 0, imageHeight: 0, imageAspectRatio: 3 }
+  },
+  {
+    name: "SVG with explicit width and height and no viewBox",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'></svg>",
+    expected: { naturalWidth: 60, naturalHeight: 40, imageWidth: 60, imageHeight: 40, imageAspectRatio: 1.5 }
+  },
+  {
+    name: "SVG with explicit width and viewBox derives natural height and aspect ratio",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' width='60' viewBox='0 0 600 200'></svg>",
+    expected: { naturalWidth: 60, naturalHeight: 20, imageWidth: 60, imageHeight: 20, imageAspectRatio: 3 }
+  },
+  {
+    name: "SVG with explicit height and viewBox derives natural width and aspect ratio",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' height='60' viewBox='0 0 600 200'></svg>",
+    expected: { naturalWidth: 180, naturalHeight: 60, imageWidth: 180, imageHeight: 60, imageAspectRatio: 3 }
+  },
+  {
+    name: "SVG with explicit width only (no height, no viewBox) has imageWidth but 0 imageHeight and 0 imageAspectRatio",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' width='60'></svg>",
+    expected: { naturalWidth: 60, naturalHeight: 150, imageWidth: 60, imageHeight: 0, imageAspectRatio: 0 }
+  },
+  {
+    name: "SVG with explicit height only (no width, no viewBox) has imageHeight but 0 imageWidth and 0 imageAspectRatio",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' height='60'></svg>",
+    expected: { naturalWidth: 300, naturalHeight: 60, imageWidth: 0, imageHeight: 60, imageAspectRatio: 0 }
+  },
+  {
+    name: "SVG with zero width and positive height has 0 imageWidth and 0 imageAspectRatio",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' width='0' height='60'></svg>",
+    expected: { naturalWidth: 0, naturalHeight: 60, imageWidth: 0, imageHeight: 60, imageAspectRatio: 0 }
+  },
+  {
+    name: "SVG with positive width and zero height has 0 imageHeight and 0 imageAspectRatio",
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' width='60' height='0'></svg>",
+    expected: { naturalWidth: 60, naturalHeight: 0, imageWidth: 60, imageHeight: 0, imageAspectRatio: 0 }
+  }
+];
+
+for (const tc of svgTests) {
+  promise_test(async t => {
+    const img = await loadImage({ src: `data:image/svg+xml,${encodeURIComponent(tc.svg)}` });
+    t.add_cleanup(() => img.remove());
+    assert_equals(img.naturalWidth, tc.expected.naturalWidth, "naturalWidth");
+    assert_equals(img.naturalHeight, tc.expected.naturalHeight, "naturalHeight");
+    assert_equals(img.imageWidth, tc.expected.imageWidth, "imageWidth");
+    assert_equals(img.imageHeight, tc.expected.imageHeight, "imageHeight");
+    assert_approx_equals(img.imageAspectRatio, tc.expected.imageAspectRatio, 1e-6, "imageAspectRatio");
+  }, tc.name);
+}
+
+promise_test(async t => {
+  const img = await loadImage({ src: "/images/arrow-oriented-upright.jpg" });
+  t.add_cleanup(() => img.remove());
+  assert_equals(img.imageWidth, 144, "imageWidth reflects EXIF orientation");
+  assert_equals(img.imageHeight, 240, "imageHeight reflects EXIF orientation");
+  assert_approx_equals(img.imageAspectRatio, 144 / 240, 1e-6, "imageAspectRatio reflects EXIF orientation");
+}, "Image with EXIF orientation metadata exposes oriented imageWidth, imageHeight, and imageAspectRatio");
+
+promise_test(async t => {
+  const img = await loadImage({
+    src: "/images/arrow-oriented-upright.jpg",
+    style: "image-orientation: none"
+  });
+  t.add_cleanup(() => img.remove());
+  assert_equals(img.imageWidth, 144, "imageWidth is unaffected by image-orientation: none");
+  assert_equals(img.imageHeight, 240, "imageHeight is unaffected by image-orientation: none");
+  assert_approx_equals(img.imageAspectRatio, 144 / 240, 1e-6, "imageAspectRatio is unaffected by image-orientation: none");
+}, "image-orientation: none does not affect imageWidth, imageHeight, or imageAspectRatio");
+</script>
+</body>
