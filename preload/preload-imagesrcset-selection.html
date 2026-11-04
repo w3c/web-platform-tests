@@ -167,5 +167,35 @@ promise_test(async t => {
     imagesrcset: `${exact} ${1 * dpr}x, ${overridden} ${100 * dpr}x`,
   }, exact, [exact, overridden]);
 }, "shadowing replaceable window.devicePixelRatio does not affect preload imagesrcset selection");
+
+promise_test(async t => {
+  const hrefDefault = squareUrl("href-default-1x");
+  const srcset1x = squareUrl("imagesrcset-explicit-1x");
+  await preloadAndVerify(t, {
+    href: hrefDefault,
+    imagesrcset: `${srcset1x} 1x`,
+  }, srcset1x, [hrefDefault, srcset1x]);
+}, "preload href with imagesrcset 1x candidate: href is omitted in favor of imagesrcset 1x entry");
+
+promise_test(async t => {
+  const hrefDefault = squareUrl("href-joins-1x");
+  const lowUrl = squareUrl("imagesrcset-low-0.5x");
+  const expected = dpr <= 0.5 ? lowUrl : hrefDefault;
+  await preloadAndVerify(t, {
+    href: hrefDefault,
+    imagesrcset: `${lowUrl} 0.5x`,
+  }, expected, [hrefDefault, lowUrl]);
+}, "preload href with lower-density imagesrcset candidate: href joins source set as 1x");
+
+promise_test(async t => {
+  const hrefDefault = squareUrl("href-ignored-with-w");
+  const wMatch = squareUrl("imagesrcset-w-match");
+  const wHigh = squareUrl("imagesrcset-w-high");
+  await preloadAndVerify(t, {
+    href: hrefDefault,
+    imagesizes: "100px",
+    imagesrcset: `${wMatch} ${Math.round(100 * dpr)}w, ${wHigh} ${Math.round(200 * dpr)}w`,
+  }, wMatch, [hrefDefault, wMatch, wHigh]);
+}, "preload href is ignored when imagesrcset uses width descriptors");
 </script>
 </body>

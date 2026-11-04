@@ -21,9 +21,10 @@ function createZoomedIframe(t, zoom, srcdoc) {
     if (zoom !== null) {
       iframe.style.zoom = String(zoom);
     }
-    iframe.srcdoc = srcdoc;
-    iframe.addEventListener("load", () => resolve(iframe), { once: true });
     document.body.appendChild(iframe);
+    iframe.offsetWidth;
+    iframe.addEventListener("load", () => resolve(iframe), { once: true });
+    iframe.srcdoc = srcdoc;
   });
 }
 
@@ -91,4 +92,18 @@ promise_test(async t => {
   assert_equals(perf.getEntriesByName(u2).length, 1, "2x candidate preloaded");
   assert_equals(perf.getEntriesByName(u4).length, 0, "4x candidate not preloaded");
 }, "link rel=preload imagesrcset in zoomed iframe selects candidate matching zoomed devicePixelRatio");
+
+promise_test(async t => {
+  const w1 = Math.round(100 * parentDpr);
+  const w2 = Math.round(200 * parentDpr);
+  const w4 = Math.round(400 * parentDpr);
+  const u1 = imageUrl("zoom2-w1");
+  const u2 = imageUrl("zoom2-w2");
+  const u4 = imageUrl("zoom2-w4");
+  const iframe = await createZoomedIframe(t, 2, `<!doctype html>
+    <img sizes="100px" srcset="${u4} ${w4}w, ${u1} ${w1}w, ${u2} ${w2}w">`);
+  assert_equals(iframe.contentWindow.devicePixelRatio, 2 * parentDpr);
+  const img = iframe.contentDocument.querySelector("img");
+  assert_equals(img.currentSrc, u2);
+}, "zoomed-in iframe (zoom: 2) with w descriptors and sizes selects normalized density matching zoomed devicePixelRatio");
 </script>
