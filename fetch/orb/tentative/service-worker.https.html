@@ -6,10 +6,11 @@
 <script src="/resources/testharnessreport.js"></script>
 <script src="/common/get-host-info.sub.js"></script>
 <script src="/common/utils.js"></script>
+<script src="/common/media.js"></script>
 <body>
 <script>
 const scope = "../resources/service-worker-scope/";
-const remote = `${get_host_info().HTTPS_REMOTE_ORIGIN}/fetch/orb/resources`;
+const remote = `${get_host_info().HTTPS_REMOTE_ORIGIN}/fetch/orb/resources/`;
 let worker;
 
 promise_setup(async () => {
@@ -31,7 +32,7 @@ promise_setup(async () => {
 });
 
 function remoteURL(path, pipe) {
-  const url = new URL(`${remote}/${path}`);
+  const url = new URL(path, remote);
   url.searchParams.set("token", token());
   if (pipe) {
     url.searchParams.set("pipe", pipe);
@@ -50,7 +51,7 @@ async function load(t, name, path, pipe) {
   const element = frame.contentDocument.createElement(name);
   element.src = `proxy?url=${encodeURIComponent(remoteURL(path, pipe))}`;
   await new Promise((resolve, reject) => {
-    element.onload = resolve;
+    element.onload = element.onloadedmetadata = resolve;
     element.onerror = () => reject(new TypeError());
     frame.contentDocument.body.append(element);
   });
@@ -78,6 +79,12 @@ promise_test(async t => {
   const { frame } = await load(t, "script", "script.js", "header(Content-Type,application/pdf)");
   assert_equals(frame.contentWindow.fn, undefined);
 }, "An opaque application/pdf fetch() response blocked by ORB has no body");
+
+promise_test(async t => {
+  const { element } = await load(t, "video", getVideoURI("/media/2x2-green"),
+                                 "header(Content-Type,application/octet-stream)");
+  assert_equals(element.videoWidth, 2);
+}, "An opaque fetch() response that sniffs as video keeps its body");
 
 promise_test(async () => {
   assert_object_equals(await fetchInWorker("data.json"), { type: "opaque" });
