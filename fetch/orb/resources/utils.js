@@ -23,7 +23,7 @@ function testElementInitiator(t, path, name) {
   t.add_cleanup(() => element.remove());
   return new Promise((resolve, reject) => {
     element.onerror = e => reject(new TypeError());
-    element.onload = resolve;
+    element.onload = element.onloadedmetadata = resolve;
 
     document.body.appendChild(element);
   });
