@@ -215,6 +215,31 @@ promise_test(async t => {
       {type: 'offer', sdp: recycleAs(unknownSdp, 'dragons')});
 }, 'An m= section rejected for an unknown media type may be recycled by the offerer');
 
+// setLocalDescription has to be given the description that was generated, and
+// WebRTC-PC rejects a modified one with InvalidModificationError. Renaming an
+// unknown media type is such a modification, even though both names are media
+// types the endpoint knows nothing about.
+promise_test(async t => {
+  const offerer = new RTCPeerConnection();
+  const answerer = new RTCPeerConnection();
+  t.add_cleanup(() => offerer.close());
+  t.add_cleanup(() => answerer.close());
+
+  offerer.addTransceiver('audio');
+  const offer = await offerer.createOffer();
+  await answerer.setRemoteDescription({
+    type: 'offer',
+    sdp: offer.sdp.replace('m=audio ', 'm=unicorns ')
+  });
+
+  const answer = await answerer.createAnswer();
+  await promise_rejects_dom(
+      t, 'InvalidModificationError', answerer.setLocalDescription({
+        type: 'answer',
+        sdp: answer.sdp.replace('m=unicorns ', 'm=dragons ')
+      }));
+}, 'A local description may not substitute one unknown media type for another');
+
 // Test that when endpoints have an asymmetric comprehension of unknown media
 // types, we can still negotiate with them.
 // Introduce a disagreement by rewriting the offer on its way to the answerer
