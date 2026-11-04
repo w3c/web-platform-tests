@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<link rel="help" href="https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#dom-print">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<title>print() from the load event handler prints once the load event is done, even when nothing is loading</title>
+<body>
+<script>
+async_test(t => {
+  // The load event waits for the iframe. When the iframe finishes, this document has nothing left loading.
+  document.write(`<iframe src="/common/blank.html?pipe=trickle(d0.3)&rand=${Math.random()}"></iframe>`);
+  let loadHandlerReturned = false;
+  addEventListener("beforeprint", t.step_func(() => {
+    assert_true(loadHandlerReturned, "the load event handler has returned");
+  }));
+  addEventListener("afterprint", t.step_func_done());
+  onload = () => {
+    print();
+    loadHandlerReturned = true;
+  };
+});
+</script>
+</body>
