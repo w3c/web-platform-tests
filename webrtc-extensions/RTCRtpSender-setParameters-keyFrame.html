@@ -4,9 +4,9 @@
 <title>RTCRtpSender.prototype.setParameters for generating keyFrames</title>
 <script src="/resources/testharness.js"></script>
 <script src="/resources/testharnessreport.js"></script>
-<script src="RTCPeerConnection-helper.js"></script>
-<script src="third_party/sdp/sdp.js"></script>
-<script src="simulcast/simulcast.js"></script>
+<script src="../webrtc/RTCPeerConnection-helper.js"></script>
+<script src="../webrtc/third_party/sdp/sdp.js"></script>
+<script src="../webrtc/simulcast/simulcast.js"></script>
 <script>
 'use strict';
 
@@ -94,4 +94,32 @@ promise_test(async t => {
   assert_true(!!second_stats_l0);
   assert_greater_than_equal(second_stats_l0.keyFramesEncoded, first_stats_l0.keyFramesEncoded);
 }, `setParameters() second argument can be used to trigger keyFrame generation (simulcast)`);
+
+promise_test(async t => {
+  const pc = new RTCPeerConnection();
+  t.add_cleanup(() => pc.close());
+  const {sender} = pc.addTransceiver('video');
+  await promise_rejects_dom(t, 'InvalidModificationError',
+    sender.setParameters(sender.getParameters(), {
+      encodingOptions: [{keyFrame: true}, {keyFrame: true}],
+    }));
+}, `setParameters() rejects when encodingOptions length does not match encodings`);
+
+promise_test(async t => {
+  const pc = new RTCPeerConnection();
+  t.add_cleanup(() => pc.close());
+  const {sender} = pc.addTransceiver('video', {
+    sendEncodings: [{rid: '0'}, {rid: '1'}],
+  });
+  await sender.setParameters(sender.getParameters(), {encodingOptions: []});
+}, `setParameters() accepts empty encodingOptions regardless of encodings length`);
+
+promise_test(async t => {
+  const pc = new RTCPeerConnection();
+  t.add_cleanup(() => pc.close());
+  const {sender} = pc.addTransceiver('audio');
+  await sender.setParameters(sender.getParameters(), {
+    encodingOptions: [{keyFrame: true}, {keyFrame: true}],
+  });
+}, `setParameters() ignores encodingOptions for audio`);
 </script>
