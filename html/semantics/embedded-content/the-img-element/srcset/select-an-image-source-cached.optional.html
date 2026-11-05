@@ -1,12 +1,13 @@
 <!doctype html>
 <title>img select an image source: optional preference for already-available higher-density image</title>
 <link rel="help" href="https://html.spec.whatwg.org/multipage/images.html#select-an-image-source-from-a-source-set">
+<link rel="help" href="https://html.spec.whatwg.org/multipage/images.html#reacting-to-environment-changes">
 <script src="/resources/testharness.js"></script>
 <script src="/resources/testharnessreport.js"></script>
 <div id="log"></div>
 <script>
 const dpr = window.devicePixelRatio;
-const DATA_GIF = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+const dataGif = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 let nextId = 0;
 
 function imageUrl(label) {
@@ -59,9 +60,9 @@ promise_test(async t => {
 promise_test(async t => {
   const uncachedMatch = imageUrl("uncached-1x-data");
   const img = await loadImg(t, {
-    srcset: `${uncachedMatch} ${1 * dpr}x, ${DATA_GIF} ${2 * dpr}x`,
+    srcset: `${uncachedMatch} ${1 * dpr}x, ${dataGif} ${2 * dpr}x`,
   });
-  assert_equals(img.currentSrc, DATA_GIF);
+  assert_equals(img.currentSrc, dataGif);
   assert_equals(performance.getEntriesByName(uncachedMatch).length, 0);
 }, "prefers higher-density data: URL candidate over uncached DPR-matching candidate");
 
@@ -93,10 +94,7 @@ promise_test(async t => {
   const img = await loadImg(t, {
     srcset: `${uncachedMatch} ${1 * dpr}x, ${cached2x} ${2 * dpr}x, ${cached3x} ${3 * dpr}x, ${uncached4x} ${4 * dpr}x`,
   });
-  assert_true(
-    img.currentSrc === cached3x || img.currentSrc === cached2x,
-    `expected an already-loaded higher-density candidate, got ${img.currentSrc}`
-  );
+  assert_in_array(img.currentSrc, [cached2x, cached3x]);
   assert_equals(performance.getEntriesByName(uncachedMatch).length, 0);
   assert_equals(performance.getEntriesByName(uncached4x).length, 0);
 }, "prefers already-loaded higher-density candidate when multiple higher-density candidates are cached");
@@ -257,16 +255,16 @@ promise_test(async t => {
 
 promise_test(async t => {
   const uncached100w = imageUrl("uncached-100w-resize");
-  const cached200w = imageUrl("cached-200w-resize");
+  const loaded200w = imageUrl("loaded-200w-resize");
   const w1 = Math.ceil(100 * dpr);
   const w2 = Math.ceil(200 * dpr);
 
   // At sizes=200px, w1 is 0.5*dpr (< dpr) and w2 is 1*dpr (>= dpr), so w2 is normatively selected.
   const img = await loadImg(t, {
     sizes: "200px",
-    srcset: `${uncached100w} ${w1}w, ${cached200w} ${w2}w`,
+    srcset: `${uncached100w} ${w1}w, ${loaded200w} ${w2}w`,
   });
-  assert_equals(img.currentSrc, cached200w);
+  assert_equals(img.currentSrc, loaded200w);
   assert_equals(performance.getEntriesByName(uncached100w).length, 0);
 
   // Shrinking sizes to 100px makes w1 = 1*dpr and w2 = 2*dpr; w2 is already loaded and kept.
@@ -274,13 +272,13 @@ promise_test(async t => {
   await new Promise(resolve => t.step_timeout(resolve, 0));
 
   assert_true(img.complete);
-  assert_equals(img.currentSrc, cached200w);
+  assert_equals(img.currentSrc, loaded200w);
   assert_equals(performance.getEntriesByName(uncached100w).length, 0);
 }, "keeps element's already-loaded wider w-descriptor candidate when sizes shrinks");
 
 promise_test(async t => {
   const uncached1x = imageUrl("uncached-1x-zoom-out");
-  const cached2x = imageUrl("cached-2x-zoom-out");
+  const loaded2x = imageUrl("loaded-2x-zoom-out");
 
   const iframe = document.createElement("iframe");
   t.add_cleanup(() => iframe.remove());
@@ -300,19 +298,18 @@ promise_test(async t => {
     img.addEventListener("load", resolve, { once: true });
     img.addEventListener("error", () => reject(new Error("img load error")), { once: true });
   });
-  img.srcset = `${uncached1x} ${1 * dpr}x, ${cached2x} ${2 * dpr}x`;
+  img.srcset = `${uncached1x} ${1 * dpr}x, ${loaded2x} ${2 * dpr}x`;
   doc.body.appendChild(img);
   await loaded;
-  assert_equals(img.currentSrc, cached2x);
+  assert_equals(img.currentSrc, loaded2x);
   assert_equals(iframe.contentWindow.performance.getEntriesByName(uncached1x).length, 0);
 
-  // Decreasing zoom to 1 lowers iframe DPR from 2*dpr to 1*dpr; cached2x remains selected.
   iframe.style.zoom = "1";
   iframe.offsetWidth;
   assert_equals(iframe.contentWindow.devicePixelRatio, 1 * dpr);
   await new Promise(resolve => t.step_timeout(resolve, 50));
 
-  assert_equals(img.currentSrc, cached2x);
+  assert_equals(img.currentSrc, loaded2x);
   assert_equals(iframe.contentWindow.performance.getEntriesByName(uncached1x).length, 0);
 }, "keeps element's already-loaded 2x candidate when iframe zoom decreases from 2 to 1");
 </script>
