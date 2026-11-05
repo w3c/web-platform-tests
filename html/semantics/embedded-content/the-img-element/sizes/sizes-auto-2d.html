@@ -308,6 +308,29 @@ onload = () => {
     assert_equals(baseUrl(img.currentSrc), ref2);
   }, 'Changing computed object-fit on an auto-sized img updates currentSrc');
 
+  // Changing computed 'object-fit' on a rendered img that does not allow
+  // auto-sizes is not a relevant mutation and does not fire load.
+  async_promise_test(async (t) => {
+    const ref1 = document.getElementById('ref1').currentSrc.split('?')[0];
+    const img = document.createElement('img');
+    t.add_cleanup(() => img.remove());
+    img.loading = 'lazy';
+    img.sizes = 'contain 10px 1000px';
+    img.style = 'object-fit: contain';
+    img.srcset = srcsetFor('non-auto-object-fit', [' 50h', ' 51h']);
+    document.body.appendChild(img);
+    await waitForLoad(t, img);
+    assert_equals(baseUrl(img.currentSrc), ref1);
+
+    let unexpectedEvent = false;
+    img.onload = img.onerror = () => { unexpectedEvent = true; };
+    img.style.objectFit = 'cover';
+    img.getBoundingClientRect();
+    await new Promise(resolve => t.step_timeout(resolve, 50));
+    assert_false(unexpectedEvent);
+    assert_equals(baseUrl(img.currentSrc), ref1);
+  }, 'Changing computed object-fit when img does not allow auto-sizes does not fire load');
+
   // Dynamic change to content-box height on an auto-sized img with
   // object-fit: cover triggers source re-selection.
   async_promise_test(async (t) => {
