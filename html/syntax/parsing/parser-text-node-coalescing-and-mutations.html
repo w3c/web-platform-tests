@@ -178,6 +178,113 @@ test(t => {
 test(t => {
   withIframe(t, doc => {
     doc.open();
+    doc.write("<!DOCTYPE html><textarea id='ta'>initial");
+    const ta = doc.getElementById("ta");
+    assert_equals(ta.value, "initial");
+
+    const records = [];
+    const observer = new MutationObserver(list => records.push(...list));
+    observer.observe(ta, {
+      childList: true,
+      characterData: true,
+      characterDataOldValue: true,
+      subtree: true,
+    });
+
+    doc.write(" appended");
+    records.push(...observer.takeRecords());
+    observer.disconnect();
+
+    assert_equals(ta.childNodes.length, 1);
+    assert_equals(ta.firstChild.data, "initial appended");
+    assert_equals(ta.value, "initial appended");
+
+    const childListRecords = records.filter(r => r.type === "childList");
+    const charDataRecords = records.filter(r => r.type === "characterData");
+    assert_equals(childListRecords.length, 0);
+    assert_equals(charDataRecords.length, 1);
+    assert_equals(charDataRecords[0].target, ta.firstChild);
+    assert_equals(charDataRecords[0].oldValue, "initial");
+
+    doc.close();
+  });
+}, "Consecutive document.write() calls inside an unclosed <textarea> flush pending text at the end of each write");
+
+test(t => {
+  withIframe(t, doc => {
+    doc.open();
+    doc.write("<!DOCTYPE html><head><title id='ti'>Hello");
+    const ti = doc.getElementById("ti");
+    assert_equals(doc.title, "Hello");
+
+    const records = [];
+    const observer = new MutationObserver(list => records.push(...list));
+    observer.observe(ti, {
+      childList: true,
+      characterData: true,
+      characterDataOldValue: true,
+      subtree: true,
+    });
+
+    doc.write(" World");
+    records.push(...observer.takeRecords());
+    observer.disconnect();
+
+    assert_equals(ti.childNodes.length, 1);
+    assert_equals(ti.firstChild.data, "Hello World");
+    assert_equals(doc.title, "Hello World");
+
+    const childListRecords = records.filter(r => r.type === "childList");
+    const charDataRecords = records.filter(r => r.type === "characterData");
+    assert_equals(childListRecords.length, 0);
+    assert_equals(charDataRecords.length, 1);
+    assert_equals(charDataRecords[0].target, ti.firstChild);
+    assert_equals(charDataRecords[0].oldValue, "Hello");
+
+    doc.close();
+  });
+}, "Consecutive document.write() calls inside an unclosed <title> flush pending text and update document.title at the end of each write");
+
+test(t => {
+  withIframe(t, doc => {
+    doc.open();
+    doc.write("<!DOCTYPE html><style id='st'>body { color: rgb(1, 2, ");
+    const st = doc.getElementById("st");
+    assert_equals(st.textContent, "body { color: rgb(1, 2, ");
+
+    const records = [];
+    const observer = new MutationObserver(list => records.push(...list));
+    observer.observe(st, {
+      childList: true,
+      characterData: true,
+      characterDataOldValue: true,
+      subtree: true,
+    });
+
+    doc.write("3); }");
+    records.push(...observer.takeRecords());
+    observer.disconnect();
+
+    assert_equals(st.childNodes.length, 1);
+    assert_equals(st.firstChild.data, "body { color: rgb(1, 2, 3); }");
+    assert_equals(st.textContent, "body { color: rgb(1, 2, 3); }");
+
+    const childListRecords = records.filter(r => r.type === "childList");
+    const charDataRecords = records.filter(r => r.type === "characterData");
+    assert_equals(childListRecords.length, 0);
+    assert_equals(charDataRecords.length, 1);
+    assert_equals(charDataRecords[0].target, st.firstChild);
+    assert_equals(charDataRecords[0].oldValue, "body { color: rgb(1, 2, ");
+
+    doc.write("</style>");
+    doc.close();
+    assert_equals(st.sheet.cssRules.length, 1);
+  });
+}, "Consecutive document.write() calls inside an unclosed <style> flush pending text at the end of each write");
+
+test(t => {
+  withIframe(t, doc => {
+    doc.open();
     doc.write(
       "<!DOCTYPE html>" +
       "<textarea id='ta'>initial </textarea>" +
@@ -393,6 +500,181 @@ test(t => {
     assert_equals(charDataRecords[0].oldValue, "ab");
   });
 }, "Ignored U+0000 NULL character tokens do not flush pending text, whereas ignored non-character tokens do");
+
+test(t => {
+  withIframe(t, doc => {
+    doc.open();
+    doc.write("<!DOCTYPE html><div id='target'>");
+    const target = doc.getElementById("target");
+    const records = [];
+    const observer = new MutationObserver(list => records.push(...list));
+    observer.observe(target, {
+      childList: true,
+      characterData: true,
+      characterDataOldValue: true,
+      subtree: true,
+    });
+
+    doc.write("a<!DOCTYPE html>b</div>");
+    doc.close();
+    records.push(...observer.takeRecords());
+    observer.disconnect();
+
+    assert_equals(target.childNodes.length, 1);
+    assert_equals(target.firstChild.data, "ab");
+
+    const childListRecords = records.filter(r => r.type === "childList");
+    const charDataRecords = records.filter(r => r.type === "characterData");
+    assert_equals(childListRecords.length, 1);
+    assert_equals(charDataRecords.length, 1);
+    assert_equals(charDataRecords[0].target, target.firstChild);
+    assert_equals(charDataRecords[0].oldValue, "a");
+  });
+}, "Stray DOCTYPE token in body flushes pending text before being ignored");
+
+test(t => {
+  withIframe(t, doc => {
+    doc.open();
+    doc.write("<!DOCTYPE html><body></body></html>");
+    const records = [];
+    const observer = new MutationObserver(list => records.push(...list));
+    observer.observe(doc, {
+      childList: true,
+      subtree: true,
+    });
+
+    doc.write(" <!--x-->");
+    doc.close();
+    records.push(...observer.takeRecords());
+    observer.disconnect();
+
+    assert_equals(records.length, 2);
+    assert_equals(records[0].target, doc.body);
+    assert_equals(records[0].addedNodes.length, 1);
+    assert_equals(records[0].addedNodes[0].nodeType, Node.TEXT_NODE);
+    assert_equals(records[0].addedNodes[0].data, " ");
+    assert_equals(records[1].target, doc);
+    assert_equals(records[1].addedNodes.length, 1);
+    assert_equals(records[1].addedNodes[0].nodeType, Node.COMMENT_NODE);
+    assert_equals(records[1].addedNodes[0].data, "x");
+  });
+}, "Comment appended to Document in 'after after body' flushes pending whitespace into <body> first");
+
+test(t => {
+  withIframe(t, doc => {
+    doc.open();
+    doc.write("<!DOCTYPE html><frameset></frameset></html>");
+    const records = [];
+    const observer = new MutationObserver(list => records.push(...list));
+    observer.observe(doc, {
+      childList: true,
+      subtree: true,
+    });
+
+    doc.write(" <!--x-->");
+    doc.close();
+    records.push(...observer.takeRecords());
+    observer.disconnect();
+
+    assert_equals(records.length, 2);
+    assert_equals(records[0].target, doc.documentElement);
+    assert_equals(records[0].addedNodes.length, 1);
+    assert_equals(records[0].addedNodes[0].nodeType, Node.TEXT_NODE);
+    assert_equals(records[0].addedNodes[0].data, " ");
+    assert_equals(records[1].target, doc);
+    assert_equals(records[1].addedNodes.length, 1);
+    assert_equals(records[1].addedNodes[0].nodeType, Node.COMMENT_NODE);
+    assert_equals(records[1].addedNodes[0].data, "x");
+  });
+}, "Comment appended to Document in 'after after frameset' flushes pending whitespace into <html> first");
+
+test(t => {
+  withIframe(t, doc => {
+    doc.open();
+    doc.write("<!DOCTYPE html><body>");
+    const records = [];
+    const observer = new MutationObserver(list => records.push(...list));
+    observer.observe(doc.body, {
+      childList: true,
+      characterData: true,
+      characterDataOldValue: true,
+      subtree: true,
+    });
+
+    doc.write("x</body>  ");
+    doc.close();
+    records.push(...observer.takeRecords());
+    observer.disconnect();
+
+    assert_equals(doc.body.childNodes.length, 1);
+    assert_equals(doc.body.firstChild.data, "x  ");
+
+    const childListRecords = records.filter(r => r.type === "childList");
+    const charDataRecords = records.filter(r => r.type === "characterData");
+    assert_equals(childListRecords.length, 1);
+    assert_equals(charDataRecords.length, 1);
+    assert_equals(charDataRecords[0].target, doc.body.firstChild);
+    assert_equals(charDataRecords[0].oldValue, "x");
+  });
+}, "Whitespace run in 'after body' coalesces into a single flush");
+
+test(t => {
+  withIframe(t, doc => {
+    doc.open();
+    doc.write("<!DOCTYPE html><body>");
+    const records = [];
+    const observer = new MutationObserver(list => records.push(...list));
+    observer.observe(doc.body, {
+      childList: true,
+      characterData: true,
+      characterDataOldValue: true,
+      subtree: true,
+    });
+
+    doc.write("x</body></html>  ");
+    doc.close();
+    records.push(...observer.takeRecords());
+    observer.disconnect();
+
+    assert_equals(doc.body.childNodes.length, 1);
+    assert_equals(doc.body.firstChild.data, "x  ");
+
+    const childListRecords = records.filter(r => r.type === "childList");
+    const charDataRecords = records.filter(r => r.type === "characterData");
+    assert_equals(childListRecords.length, 1);
+    assert_equals(charDataRecords.length, 1);
+    assert_equals(charDataRecords[0].target, doc.body.firstChild);
+    assert_equals(charDataRecords[0].oldValue, "x");
+  });
+}, "Whitespace run in 'after after body' coalesces into a single flush");
+
+test(t => {
+  withIframe(t, doc => {
+    doc.open();
+    doc.write("<!DOCTYPE html><frameset></frameset></html>");
+    const records = [];
+    const observer = new MutationObserver(list => records.push(...list));
+    observer.observe(doc.documentElement, {
+      childList: true,
+      characterData: true,
+      characterDataOldValue: true,
+      subtree: true,
+    });
+
+    doc.write("   ");
+    doc.close();
+    records.push(...observer.takeRecords());
+    observer.disconnect();
+
+    assert_equals(doc.documentElement.lastChild.nodeType, Node.TEXT_NODE);
+    assert_equals(doc.documentElement.lastChild.data, "   ");
+
+    const childListRecords = records.filter(r => r.type === "childList");
+    const charDataRecords = records.filter(r => r.type === "characterData");
+    assert_equals(childListRecords.length, 1);
+    assert_equals(charDataRecords.length, 0);
+  });
+}, "Whitespace run in 'after after frameset' coalesces into a single Text insertion");
 
 test(t => {
   withIframe(t, (doc, win) => {
