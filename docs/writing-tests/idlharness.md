@@ -119,6 +119,6 @@ filtered using the name of the interface that includes them.
 For example, to exclude one operation while keeping the rest of an interface:
 
 ```js
-idl_array.set_test_filter((interfaceName, memberName) =>
-  !(interfaceName === 'Example' && memberName === 'excludedOperation'));
+idl_array.set_test_filter((name, memberName) =>
+  !(name === 'Example' && memberName === 'excludedOperation'));
 ```
