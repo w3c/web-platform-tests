@@ -418,9 +418,10 @@ promise_test(async t => {
 
   await selectImg(t, { src: cachedSrc });
 
+  // Set srcset first: setting src alone would take the list of available images path.
   const selected = await selectImg(t, {
-    src: cachedSrc,
     srcset: `${uncached1x} 1x, ${uncachedHigh} ${Math.max(2, 2 * dpr)}x`,
+    src: cachedSrc,
   });
   assert_equals(selected, dpr <= 1 ? uncached1x : uncachedHigh);
 }, "cached src attribute is excluded from source set when srcset already has a 1x descriptor");
