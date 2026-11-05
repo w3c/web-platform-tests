@@ -313,6 +313,55 @@ promise_test(async t => {
 promise_test(async t => {
   const token = ++nextId;
   const c = label => candidateUrl(label, token);
+  const picture = document.createElement('picture');
+  const source = document.createElement('source');
+  const img = document.createElement('img');
+  t.add_cleanup(() => picture.remove());
+  source.media = '(min-width: 1px)';
+  source.setAttribute('width', '1200');
+  source.setAttribute('height', '400');
+  source.sizes = 'cover 400px 400px, 2000px';
+  source.srcset = `${c('src-400')} ${wOnly(1, 400)}, ${c('src-1200')} ${wOnly(1, 1200)}, ${c('src-2000')} ${wOnly(1, 2000)}`;
+  img.width = 400;
+  img.height = 400;
+  img.sizes = 'cover 400px 400px, 2000px';
+  img.srcset = `${c('img-400')} ${wOnly(1, 400)}, ${c('img-1200')} ${wOnly(1, 1200)}, ${c('img-2000')} ${wOnly(1, 2000)}`;
+  picture.append(source, img);
+  const initialLoaded = waitForLoad(t, img, 'initial picture img');
+  document.body.appendChild(picture);
+  await initialLoaded;
+  assert_equals(getSelectedCandidate(img.currentSrc), 'src-1200');
+
+  const reloaded = waitForLoad(t, img, 'fallback picture img');
+  source.media = '(max-width: 0px)';
+  await reloaded;
+  assert_equals(getSelectedCandidate(img.currentSrc), 'img-400');
+}, '<picture> falling back from <source> with width/height resets dimension attribute source to <img> for normative 2D selection');
+
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
+  const link = document.createElement('link');
+  t.add_cleanup(() => link.remove());
+  assert_implements(link.relList && link.relList.supports('preload'), 'preload not supported');
+  link.rel = 'preload';
+  link.as = 'image';
+  link.setAttribute('width', '1200');
+  link.setAttribute('height', '400');
+  link.imageSizes = 'cover 400px 1000px, 2000px';
+  link.imageSrcset = `${c('half-400')} ${wOnly(0.5, 400)}, ${c('exact-400')} ${wOnly(1, 400)}, ${c('exact-1200')} ${wOnly(1, 1200)}, ${c('exact-2000')} ${wOnly(1, 2000)}`;
+  const loaded = waitForLoad(t, link, 'link preload');
+  document.head.appendChild(link);
+  await loaded;
+  const entries = performance.getEntriesByType('resource')
+    .filter(e => e.name.includes(`id=${token}&`));
+  assert_equals(entries.length, 1, 'exactly one candidate should be preloaded');
+  assert_equals(getSelectedCandidate(entries[0].name), 'exact-400');
+}, '<link rel=preload as=image> ignores width/height attributes and uses null defaultAspectRatio for 2D selection');
+
+promise_test(async t => {
+  const token = ++nextId;
+  const c = label => candidateUrl(label, token);
   const img = document.createElement('img');
   t.add_cleanup(() => img.remove());
   img.sizes = 'cover 400px 400px';
