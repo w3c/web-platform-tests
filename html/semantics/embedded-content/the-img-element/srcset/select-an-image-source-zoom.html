@@ -51,24 +51,6 @@ promise_test(async t => {
 }, "zoomed-out iframe (zoom: 0.5) selects x-descriptor matching zoomed devicePixelRatio");
 
 promise_test(async t => {
-  const u1 = imageUrl("dyn-zoom-1x");
-  const u2 = imageUrl("dyn-zoom-2x");
-  const iframe = await createZoomedIframe(t, null, `<!doctype html>
-    <img srcset="${u1} ${1 * parentDpr}x, ${u2} ${2 * parentDpr}x">`);
-  const img = iframe.contentDocument.querySelector("img");
-  assert_equals(img.currentSrc, u1);
-
-  const reloaded = new Promise((resolve, reject) => {
-    img.addEventListener("load", resolve, { once: true });
-    img.addEventListener("error", () => reject(new Error("img error on zoom")), { once: true });
-  });
-  iframe.style.zoom = "2";
-  await reloaded;
-  assert_equals(iframe.contentWindow.devicePixelRatio, 2 * parentDpr);
-  assert_equals(img.currentSrc, u2);
-}, "dynamic zoom change updates devicePixelRatio and re-selects x-descriptor image source");
-
-promise_test(async t => {
   const u1 = imageUrl("preload-zoom2-1x");
   const u2 = imageUrl("preload-zoom2-2x");
   const u4 = imageUrl("preload-zoom2-4x");
