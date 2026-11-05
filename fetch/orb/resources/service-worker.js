@@ -5,6 +5,10 @@ self.addEventListener("fetch", event => {
     }));
     return;
   }
+  if (new URL(event.request.url).searchParams.has("passthrough")) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
   const target = new URL(event.request.url).searchParams.get("url");
   if (target) {
     event.respondWith(fetch(target, { mode: "no-cors" }));

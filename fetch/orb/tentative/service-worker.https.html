@@ -86,6 +86,27 @@ promise_test(async t => {
   assert_equals(element.videoWidth, 2);
 }, "An opaque fetch() response that sniffs as video keeps its body");
 
+promise_test(async t => {
+  const frame = document.createElement("iframe");
+  frame.src = `${scope}blank`;
+  t.add_cleanup(() => frame.remove());
+  await new Promise(resolve => {
+    frame.onload = resolve;
+    document.body.append(frame);
+  });
+  const video = frame.contentDocument.createElement("video");
+  video.preload = "metadata";
+  const url = new URL(remoteURL(getVideoURI("/media/movie_300")));
+  url.searchParams.set("passthrough", "");
+  video.src = url.href;
+  const error = new Promise((_, reject) => video.onerror = () => reject(new TypeError()));
+  frame.contentDocument.body.append(video);
+  await Promise.race([new Promise(resolve => video.onloadedmetadata = resolve), error]);
+  video.currentTime = 250;
+  await Promise.race([new Promise(resolve => video.onseeked = resolve), error]);
+  assert_approx_equals(video.currentTime, 250, 1);
+}, "A cross-origin video passed through a service worker with fetch(event.request) can seek");
+
 promise_test(async () => {
   assert_object_equals(await fetchInWorker("data.json"), { type: "opaque" });
 }, "fetch() resolves with an opaque response when ORB blocks it");
