@@ -753,11 +753,11 @@ IdlArray.prototype.test = function()
 
         if (this.test_filter && member instanceof IdlInterface) {
             if (!this.test_filter(memberName)) {
-                member.untested = true;
+                member.filtered = true;
             }
             for (const idlMember of member.members) {
                 if (!this.test_filter(memberName, idlMember.name)) {
-                    idlMember.untested = true;
+                    idlMember.filtered = true;
                 }
             }
         }
@@ -1447,7 +1447,7 @@ IdlInterface.prototype.test = function()
     // tested either, but objects could still be tested in |test_object|.
     if (!this.exposed)
     {
-        if (!this.untested)
+        if (!this.untested && !this.filtered)
         {
             subsetTestByKey(this.name, test, function() {
                 assert_false(this.name in self, this.name + " interface should not exist");
@@ -1456,19 +1456,21 @@ IdlInterface.prototype.test = function()
         return;
     }
 
-    if (!this.untested)
+    if (!this.untested && !this.filtered)
     {
         // First test things to do with the exception/interface object and
         // exception/interface prototype object.
         this.test_self();
     }
     // Then test things to do with its members (constants, fields, attributes,
-    // operations, . . .).  These are run even if .untested is true, because
-    // members might themselves be marked as .untested.  This might happen to
-    // interfaces if the interface itself is untested but a partial interface
-    // that extends it is tested -- then the interface itself and its initial
-    // members will be marked as untested, but the members added by the partial
-    // interface are still tested.
+    // operations, . . .).  These are run even if .untested or .filtered is
+    // true, because members might themselves be marked as such.  This might
+    // happen to interfaces if the interface itself is untested but a partial
+    // interface that extends it is tested -- then the interface itself and its
+    // initial members will be marked as untested, but the members added by the
+    // partial interface are still tested.  (.untested marks dependencies from
+    // other specs; .filtered marks what set_test_filter() rejected, which, unlike
+    // .untested, does not change the expected default toJSON() keys.)
     this.test_members();
 };
 
@@ -2703,7 +2705,7 @@ IdlInterface.prototype.test_members = function()
     for (var i = 0; i < this.members.length; i++)
     {
         var member = this.members[i];
-        if (member.untested) {
+        if (member.untested || member.filtered) {
             continue;
         }
 
@@ -2825,7 +2827,7 @@ IdlInterface.prototype.test_primary_interface_of = function(desc, obj, exception
 {
     // Only the object itself, not its members, are tested here, so if the
     // interface is untested, there is nothing to do.
-    if (this.untested)
+    if (this.untested || this.filtered)
     {
         return;
     }
@@ -2894,7 +2896,7 @@ IdlInterface.prototype.test_interface_of = function(desc, obj, exception, expect
     for (var i = 0; i < this.members.length; i++)
     {
         var member = this.members[i];
-        if (member.untested) {
+        if (member.untested || member.filtered) {
             continue;
         }
         if (!exposed_in(exposure_set(member, this.exposureSet)))
