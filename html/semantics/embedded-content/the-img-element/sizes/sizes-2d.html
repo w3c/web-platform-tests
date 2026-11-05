@@ -14,6 +14,7 @@ img { width: 10px; height: 10px; }
 <img srcset='/images/green-1x1.png?ref2 50w, /images/green-16x16.png?ref2 51w' sizes='1000px' id=ref2>
 <script>
 "use strict";
+setup({explicit_done: true});
 
 // https://github.com/web-platform-tests/rfcs/pull/75
 let async_promise_test = (promise, description) => {
@@ -24,9 +25,27 @@ let async_promise_test = (promise, description) => {
   }, description);
 };
 
+function waitForLoad(t, target) {
+  return new Promise((resolve, reject) => {
+    const timer = t.step_timeout(() => {
+      reject(new Error('Timed out waiting for load event'));
+    }, 2000);
+    target.onload = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    target.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error('Unexpected error event'));
+    };
+  });
+}
+
 function check(imgOrPicture, img, refId) {
   const ref = document.getElementById(refId);
+  const name = imgOrPicture.outerHTML;
   async_promise_test(async (t) => {
+    t.add_cleanup(() => imgOrPicture.remove());
     let expect = ref.currentSrc;
     if (expect) {
       expect = expect.split('?')[0];
@@ -34,15 +53,12 @@ function check(imgOrPicture, img, refId) {
     if (expect === '' || expect === null || expect === undefined) {
       assert_unreached('ref currentSrc was ' + format_value(expect));
     }
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
+    await waitForLoad(t, img);
     t.step(() => {
       assert_greater_than(img.currentSrc.indexOf('?'), -1, 'expected a "?" in currentSrc');
       assert_equals(img.currentSrc.split('?')[0], expect);
     });
-  }, imgOrPicture.outerHTML);
+  }, name);
 }
 
 // `h` holds the height descriptors (if any) of the 50w and 51w candidates.
@@ -225,19 +241,18 @@ function test_link_preload(obj, i) {
   link.setAttribute('imagesizes', obj.sizes);
   link.setAttribute('imagesrcset', srcsetFor(`link${i}`, obj.h));
   const ref = document.getElementById(obj.ref);
+  const name = link.outerHTML;
   async_promise_test(async (t) => {
+    t.add_cleanup(() => link.remove());
     const expect = ref.currentSrc.split('?')[0];
-    const loaded = new Promise((resolve, reject) => {
-      link.onload = resolve;
-      link.onerror = reject;
-    });
+    const loaded = waitForLoad(t, link);
     document.head.appendChild(link);
     await loaded;
     const entries = performance.getEntriesByType('resource')
         .filter(e => e.name.endsWith(`?link${i}`));
     assert_equals(entries.length, 1, 'exactly one candidate is preloaded');
     assert_equals(entries[0].name.split('?')[0], expect);
-  }, link.outerHTML);
+  }, name);
 }
 
 onload = () => {
@@ -302,6 +317,7 @@ onload = () => {
     const ref1 = document.getElementById('ref1').currentSrc.split('?')[0];
     const ref2 = document.getElementById('ref2').currentSrc.split('?')[0];
     const picture = document.createElement('picture');
+    t.add_cleanup(() => picture.remove());
     const source = document.createElement('source');
     const img = document.createElement('img');
     source.media = '(min-width: 0px)';
@@ -315,17 +331,12 @@ onload = () => {
     img.height = 1000;
     picture.appendChild(source);
     picture.appendChild(img);
+    const loaded = waitForLoad(t, img);
     document.body.appendChild(picture);
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
+    await loaded;
     assert_equals(img.currentSrc.split('?')[0], ref2);
 
-    const reloaded = new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
+    const reloaded = waitForLoad(t, img);
     source.media = '(max-width: 0px)';
     await reloaded;
     assert_equals(img.currentSrc.split('?')[0], ref1);
@@ -339,10 +350,7 @@ onload = () => {
     img.src = '/images/green-1x1.png?plain-src-dims';
     img.width = 10;
     img.height = 10;
-    const loaded = new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
+    const loaded = waitForLoad(t, img);
     document.body.appendChild(img);
     await loaded;
 
@@ -362,10 +370,7 @@ onload = () => {
     t.add_cleanup(() => img.remove());
     img.sizes = 'contain 10px 1000px';
     img.srcset = '/images/green-1x1.png?bare-h 50h, /images/green-16x16.png?bare-h 51w 51h';
-    const loaded = new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
+    const loaded = waitForLoad(t, img);
     document.body.appendChild(img);
     await loaded;
     assert_equals(img.currentSrc.split('?')[0], ref2);
@@ -380,19 +385,13 @@ onload = () => {
     img.style = 'width: auto; height: auto';
     img.sizes = 'cover 10px 100px';
     img.srcset = '/images/green-16x16.png?density-corrected 16w 16h';
-    let loaded = new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
+    let loaded = waitForLoad(t, img);
     document.body.appendChild(img);
     await loaded;
     assert_equals(img.width, 100);
     assert_equals(img.height, 100);
 
-    loaded = new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
+    loaded = waitForLoad(t, img);
     img.sizes = 'contain 10px 100px';
     await loaded;
     assert_equals(img.width, 10);
@@ -412,18 +411,12 @@ onload = () => {
     source.srcset = srcsetFor('dynamic-2d-sizes', square);
     picture.appendChild(source);
     picture.appendChild(img);
-    let loaded = new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
+    let loaded = waitForLoad(t, img);
     document.body.appendChild(picture);
     await loaded;
     assert_equals(img.currentSrc.split('?')[0], ref1);
 
-    loaded = new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
+    loaded = waitForLoad(t, img);
     source.sizes = 'cover 10px 1000px';
     await loaded;
     assert_equals(img.currentSrc.split('?')[0], ref2);
@@ -445,18 +438,12 @@ onload = () => {
     source.setAttribute('height', '100');
     picture.appendChild(source);
     picture.appendChild(img);
-    let loaded = new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
+    let loaded = waitForLoad(t, img);
     document.body.appendChild(picture);
     await loaded;
     assert_equals(img.currentSrc.split('?')[0], ref1);
 
-    loaded = new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
+    loaded = waitForLoad(t, img);
     source.setAttribute('height', '1');
     await loaded;
     assert_equals(img.currentSrc.split('?')[0], ref2);
