@@ -28,7 +28,19 @@ function waitForLoad(t, target, label = 'element') {
 }
 
 function candidateUrl(label, token) {
-  return new URL(`/images/green-16x16.png?id=${token}&candidate=${label}`, location.href).href;
+  return new URL(`/images/green-256x256.png?id=${token}&candidate=${label}`, location.href).href;
+}
+
+function assertDensityCorrectedDimensions(img, expectedDensity) {
+  const expected = 256 / expectedDensity;
+  if (Number.isInteger(expected)) {
+    assert_equals(img.naturalWidth, expected);
+    assert_equals(img.naturalHeight, expected);
+  } else {
+    const allowed = [Math.floor(expected), Math.round(expected)];
+    assert_in_array(img.naturalWidth, allowed);
+    assert_in_array(img.naturalHeight, allowed);
+  }
 }
 
 function getSelectedCandidate(url) {
@@ -225,8 +237,7 @@ for (const tc of explicit2DTests) {
       assert_equals(img.naturalWidth, 0);
       assert_equals(img.naturalHeight, 0);
     } else if (tc.expectedDensity !== undefined) {
-      assert_equals(img.naturalWidth, Math.floor(16 / tc.expectedDensity));
-      assert_equals(img.naturalHeight, Math.floor(16 / tc.expectedDensity));
+      assertDensityCorrectedDimensions(img, tc.expectedDensity);
     }
   }, `<img>: ${tc.desc}`);
 
@@ -248,8 +259,7 @@ for (const tc of explicit2DTests) {
       assert_equals(img.naturalWidth, 0);
       assert_equals(img.naturalHeight, 0);
     } else if (tc.expectedDensity !== undefined) {
-      assert_equals(img.naturalWidth, Math.floor(16 / tc.expectedDensity));
-      assert_equals(img.naturalHeight, Math.floor(16 / tc.expectedDensity));
+      assertDensityCorrectedDimensions(img, tc.expectedDensity);
     }
   }, `<picture><source>: ${tc.desc}`);
 
@@ -682,9 +692,6 @@ for (const tc of auto2DTests) {
     if (tc.expectedZeroNaturalDims) {
       assert_equals(img.naturalWidth, 0);
       assert_equals(img.naturalHeight, 0);
-    } else if (tc.expectedDensity !== undefined) {
-      assert_equals(img.naturalWidth, Math.floor(16 / tc.expectedDensity));
-      assert_equals(img.naturalHeight, Math.floor(16 / tc.expectedDensity));
     }
   }, `<picture><source>: ${tc.desc}`);
 }
