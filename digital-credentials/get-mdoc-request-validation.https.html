@@ -50,4 +50,16 @@
       TypeError,
     );
   }, "encryptionInfo that is not a string");
+
+  promise_test(async (t) => {
+    await checkRequest(
+      t,
+      "org-iso-mdoc",
+      {
+        deviceRequest: CANONICAL_DEVICE_REQUEST_STR,
+        encryptionInfo: "not base64!!!",
+      },
+      "AbortError",
+    );
+  }, "encryptionInfo that is a deliberately non-base64 string");
 </script>
