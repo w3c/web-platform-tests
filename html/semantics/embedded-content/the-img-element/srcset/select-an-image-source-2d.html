@@ -179,6 +179,34 @@ const explicit2DTests = [
     expected: 'a',
     expectedDensity: exactDensity(1, 512),
   },
+  {
+    desc: 'same w descriptor with different h descriptors is valid and normalizes each candidate using its own aspect ratio',
+    sizes: 'cover 256px 256px, 2048px',
+    srcset: c => `${c('tall')} ${pair(2, 1, 2, 256)}, ${c('wide')} ${pair(1, 2, 1, 256)}, ${c('fallback-1d')} ${wOnly(1, 2048)}`,
+    expected: 'wide',
+    expectedDensity: exactDensity(1, 512),
+  },
+  {
+    desc: 'same w descriptor with and without h descriptor keeps both candidates during srcset parsing and normalizes per candidate',
+    sizes: 'contain 512px 256px, 2048px',
+    srcset: c => `${c('no-h')} ${wOnly(0.5, 512)}, ${c('with-h')} ${pair(1, 1, 1, 256)}, ${c('fallback-1d')} ${wOnly(1, 2048)}`,
+    expected: 'with-h',
+    expectedDensity: exactDensity(1, 256),
+  },
+  {
+    desc: 'duplicate (w, h) descriptors normalize to identical density and keep the first candidate',
+    sizes: 'cover 256px 256px, 2048px',
+    srcset: c => `${c('dup-first')} ${pair(1, 2, 1, 256)}, ${c('dup-second')} ${pair(1, 2, 1, 256)}, ${c('fallback-1d')} ${wOnly(1, 2048)}`,
+    expected: 'dup-first',
+    expectedDensity: exactDensity(1, 512),
+  },
+  {
+    desc: 'when 2D concrete width is 0px, a finite x descriptor >= DPR beats a w descriptor normalized to Infinity',
+    sizes: 'contain 256px 0px, 2048px',
+    srcset: c => `${c('inf-w')} ${pair(1, 1, 1, 2048)}, ${c('finite-x')} ${2 * dpr}x`,
+    expected: 'finite-x',
+    expectedDensity: 2 * dpr,
+  },
 ];
 
 for (const tc of explicit2DTests) {
@@ -611,6 +639,7 @@ const auto2DTests = [
     style: 'width: 100px; height: 0px; object-fit: contain',
     srcset: c => `${c('first')} ${pair(2, 1, 1, 100)}, ${c('second')} ${pair(1, 1, 1, 100)}`,
     expected: 'first',
+    expectedZeroNaturalDims: true,
   },
 ];
 
@@ -628,6 +657,10 @@ for (const tc of auto2DTests) {
     document.body.appendChild(img);
     await loaded;
     assert_equals(getSelectedCandidate(img.currentSrc), tc.expected);
+    if (tc.expectedZeroNaturalDims) {
+      assert_equals(img.naturalWidth, 0);
+      assert_equals(img.naturalHeight, 0);
+    }
   }, `<img>: ${tc.desc}`);
 
   promise_test(async t => {

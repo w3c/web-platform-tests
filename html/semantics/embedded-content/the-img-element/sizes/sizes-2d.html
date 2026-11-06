@@ -169,13 +169,27 @@ const tests = [
   {sizes: 'cover 1000px var(--h, 1000px), contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
   {sizes: '(min-width: 0px) cover 10px 1000px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
   {sizes: '(min-width: 0px) contain 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  // CSS <ident-token> escapes are valid fit keywords, while <string-token> and
+  // <function-token> are rejected.
+  {sizes: 'c\\6f ver 10px 10px, 1px', h: [' 1h', ' 2h'], ref: 'ref2'},
+  {sizes: '"cover" 1000px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: 'cover(1000px 1000px), contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
 
   // Without 'h' descriptors, the dimension attribute aspect ratio is used:
   // max(10px, 1000px * 1) = 1000px, or max(10px, 10px * 100) = 1000px.
   {sizes: 'cover 10px 1000px, 1px', width: '1', height: '1', h: ['', ''], ref: 'ref2'},
   {sizes: '(min-width: 0px) cover 10px 10px, 1px', width: '100', height: '1', h: ['', ''], ref: 'ref2'},
-  // Decimal dimension values are valid per the rules for parsing dimension values.
+  // HTML rules for parsing dimension values: decimal with leading zero,
+  // leading/trailing ASCII whitespace, and trailing unit garbage are valid
+  // lengths; leading '+', leading '.', and exponential suffix after digits
+  // follow HTML dimension parsing rather than CSS/JS float parsing.
   {sizes: 'cover 10px 1000px, 1px', width: '1.5', height: '1.5', h: ['', ''], ref: 'ref2'},
+  {sizes: 'cover 10px 100px, 1px', width: '1', height: '0.01', h: ['', ''], ref: 'ref2'},
+  {sizes: 'cover 10px 100px, 1px', width: ' 100 ', height: ' 1 ', h: ['', ''], ref: 'ref2'},
+  {sizes: 'cover 10px 100px, 1px', width: '100px', height: '1px', h: ['', ''], ref: 'ref2'},
+  {sizes: 'cover 10px 1000px, 1000px', width: '+100', height: '1', h: ['', ''], ref: 'ref1'},
+  {sizes: 'cover 10px 1000px, 1000px', width: '.5', height: '0.005', h: ['', ''], ref: 'ref1'},
+  {sizes: 'cover 10px 1000px, 1000px', width: '1e3', height: '100', h: ['', ''], ref: 'ref1'},
   // Zero, percentage, negative, or non-numeric dimension attributes give a null
   // dimension attribute aspect ratio, so the box width is used rather than 0,
   // negative, or +1 (-1/-1).
@@ -190,7 +204,7 @@ const tests = [
   {sizes: 'cover 10px 1000px, 1000px', h: ['', ''], ref: 'ref1'},
   // 'h' descriptors take precedence over the dimension attribute aspect ratio
   // in both directions.
-  {sizes: 'cover 10px 100px, 1px', width: '1', height: '10', h: [' 5h', ' 5h'], ref: 'ref2'},
+  {sizes: 'cover 10px 10px, 1px', width: '1', height: '10', h: [' 1h', ' 2h'], ref: 'ref2'},
   {sizes: 'cover 10px 1000px, 1000px', width: '1', height: '1', h: [' 5000h', ' 5100h'], ref: 'ref1'},
   // Source aspect ratio is computed per candidate:
   // 1) In `contain 100px 10px, 100px`, candidate 1 (50w 500h -> ar 0.1 ->
@@ -625,6 +639,90 @@ onload = () => {
     await flushImagePipeline(t);
     assert_false(unexpectedEvent);
   }, 'A following <source> after <img> in <picture> does not affect <img> or trigger load');
+
+  // Removing a matching <source> from <picture> resets the dimension attribute
+  // source to <img>.
+  async_promise_test(async (t) => {
+    const ref1 = document.getElementById('ref1').currentSrc.split('?')[0];
+    const ref2 = document.getElementById('ref2').currentSrc.split('?')[0];
+    const picture = document.createElement('picture');
+    t.add_cleanup(() => picture.remove());
+    const source = document.createElement('source');
+    const img = document.createElement('img');
+    source.sizes = 'cover 10px 1000px, 1000px';
+    source.srcset = srcsetFor('picture-remove-source', ['', '']);
+    source.setAttribute('width', '1');
+    source.setAttribute('height', '100');
+    img.sizes = 'cover 10px 1000px, 1px';
+    img.srcset = srcsetFor('picture-remove-img', ['', '']);
+    img.width = 1;
+    img.height = 1;
+    picture.appendChild(source);
+    picture.appendChild(img);
+    const initialLoaded = waitForLoad(t, img);
+    document.body.appendChild(picture);
+    await initialLoaded;
+    assert_equals(img.currentSrc.split('?')[0], ref1);
+
+    const reloaded = waitForLoad(t, img);
+    source.remove();
+    await reloaded;
+    assert_equals(img.currentSrc.split('?')[0], ref2);
+  }, 'Removing a matching <source> from <picture> resets dimension attribute source to <img>');
+
+  // A preceding <source> skipped because of an unsupported MIME type does not
+  // become the dimension attribute source for <img>.
+  async_promise_test(async (t) => {
+    const ref2 = document.getElementById('ref2').currentSrc.split('?')[0];
+    const picture = document.createElement('picture');
+    t.add_cleanup(() => picture.remove());
+    const skippedSource = document.createElement('source');
+    const img = document.createElement('img');
+    skippedSource.type = 'image/x-unsupported-2d-test';
+    skippedSource.sizes = 'cover 10px 1000px, 1px';
+    skippedSource.srcset = srcsetFor('picture-unsupported-source', ['', '']);
+    skippedSource.setAttribute('width', '1');
+    skippedSource.setAttribute('height', '100');
+    img.sizes = 'cover 10px 1000px, 1px';
+    img.srcset = srcsetFor('picture-unsupported-fallback-img', ['', '']);
+    img.width = 1;
+    img.height = 1;
+    picture.appendChild(skippedSource);
+    picture.appendChild(img);
+    const loaded = waitForLoad(t, img);
+    document.body.appendChild(picture);
+    await loaded;
+    assert_equals(img.currentSrc.split('?')[0], ref2);
+  }, 'A preceding <source> with an unsupported type does not override <img> dimension attribute aspect ratio');
+
+  // 2D sizes inside an <iframe> uses the iframe's own viewport (vw vs vh) and
+  // re-selects on dynamic iframe viewport height resize.
+  async_promise_test(async (t) => {
+    const ref1 = document.getElementById('ref1').currentSrc.split('?')[0];
+    const ref2 = document.getElementById('ref2').currentSrc.split('?')[0];
+    const iframe = document.createElement('iframe');
+    t.add_cleanup(() => iframe.remove());
+    iframe.style.cssText = 'width: 100px; height: 10px; border: 0';
+    const iframeLoaded = new Promise(resolve => { iframe.onload = resolve; });
+    iframe.srcdoc = '<!doctype html><body></body>';
+    document.body.appendChild(iframe);
+    await iframeLoaded;
+
+    const img = iframe.contentDocument.createElement('img');
+    img.sizes = 'cover 10vw 100vh, 1000px';
+    img.srcset = srcsetFor('iframe-vw-vh', [' 50h', ' 51h']);
+    const initialLoaded = waitForLoad(t, img);
+    iframe.contentDocument.body.appendChild(img);
+    await initialLoaded;
+    // 10vw = 10px and 100vh = 10px in the 100x10 iframe -> max(10px, 10px) = 10px (ref1).
+    assert_equals(img.currentSrc.split('?')[0], ref1);
+
+    const reloaded = waitForLoad(t, img);
+    iframe.style.height = '200px';
+    await reloaded;
+    // 100vh = 200px in the resized 100x200 iframe -> max(10px, 200px) = 200px (ref2).
+    assert_equals(img.currentSrc.split('?')[0], ref2);
+  }, '2D sizes in an <iframe> uses the iframe viewport for vw/vh and re-selects when iframe height changes');
 
   done();
 }
