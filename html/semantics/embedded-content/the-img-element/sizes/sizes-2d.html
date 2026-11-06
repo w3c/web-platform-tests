@@ -103,11 +103,12 @@ const tests = [
   // candidate wins per duplicate density removal.
   {sizes: 'cover 10px 1000px', h: [' 100h', ' 100h'], ref: 'ref1'},
   // Invalid 'h' descriptors cause that image candidate to be dropped.
-  {sizes: 'cover 10px 1000px, 1px', h: [' 0h', ' 51h'], ref: 'ref2'},
+  {sizes: 'contain 10px 1000px', h: [' 0h', ' 51h'], ref: 'ref2'},
   {sizes: 'cover 10px 1000px, 1px', h: [' -50h', ' 51h'], ref: 'ref2'},
-  {sizes: 'cover 10px 1000px, 1px', h: [' 50.5h', ' 51h'], ref: 'ref2'},
-  {sizes: 'cover 10px 1000px, 1px', h: [' 50h 50h', ' 51h'], ref: 'ref2'},
-  {sizes: 'cover 10px 1000px, 1px', h: [' 50h 1x', ' 51h'], ref: 'ref2'},
+  {sizes: 'contain 10px 1000px', h: [' 50.5h', ' 51h'], ref: 'ref2'},
+  {sizes: 'contain 10px 1000px', h: [' 50h 50h', ' 51h'], ref: 'ref2'},
+  {sizes: 'contain 10px 1000px', h: [' 50h 5x', ' 51h'], ref: 'ref2'},
+  {sizes: 'contain 10px 1000px', h: ['5x 50h ', ' 51h'], ref: 'ref2'},
   // 'h' descriptor preceding the 'w' descriptor.
   {sizes: 'cover 10px 10px, 1px', h: ['1h ', '2h '], ref: 'ref2'},
   {sizes: 'contain 10px 1000px', h: ['50h ', '51h '], ref: 'ref1'},
@@ -193,9 +194,9 @@ const tests = [
   // dimension attribute aspect ratio, so the box width is used rather than 0,
   // negative, or +1 (-1/-1).
   {sizes: 'contain 1000px 10px, 1px', width: '0', height: '1', h: ['', ''], ref: 'ref2'},
-  {sizes: 'cover 10px 1000px, 1000px', width: '1', height: '0', h: ['', ''], ref: 'ref1'},
+  {sizes: 'contain 1000px 10px, 1px', width: '1', height: '0', h: ['', ''], ref: 'ref2'},
   {sizes: 'cover 10px 1000px, 1000px', width: '100%', height: '1', h: ['', ''], ref: 'ref1'},
-  {sizes: 'cover 10px 1000px, 1000px', width: '1', height: '100%', h: ['', ''], ref: 'ref1'},
+  {sizes: 'contain 1000px 10px, 1px', width: '1', height: '100%', h: ['', ''], ref: 'ref2'},
   {sizes: 'contain 1000px 10px, 1px', width: '-1', height: '1', h: ['', ''], ref: 'ref2'},
   {sizes: 'cover 10px 1000px, 1000px', width: '-1', height: '-1', h: ['', ''], ref: 'ref1'},
   {sizes: 'cover 10px 1000px, 1000px', width: 'auto', height: '1', h: ['', ''], ref: 'ref1'},

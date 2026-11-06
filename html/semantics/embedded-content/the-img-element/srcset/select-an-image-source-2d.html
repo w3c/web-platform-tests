@@ -413,7 +413,7 @@ promise_test(async t => {
   const img = document.createElement('img');
   t.add_cleanup(() => img.remove());
   img.sizes = 'cover 512px 512px';
-  img.srcset = `${c('bare-h')} 512h, ${c('zero-h')} 512w 0h, ${c('neg-h')} 512w -128h, ${c('float-h')} 512w 1.5h`;
+  img.srcset = `${c('bare-h')} 512h, ${c('zero-h')} 512w 0h, ${c('neg-h')} 512w -128h, ${c('float-h')} 512w 1.5h, ${c('dup-h')} 512w 512h 512h, ${c('h-and-x')} 512w 512h 1x, ${c('x-and-h')} 512w 1x 512h`;
   img.src = c('fallback');
   const loaded = waitForLoad(t, img, 'img');
   document.body.appendChild(img);
