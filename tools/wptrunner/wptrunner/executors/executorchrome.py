@@ -25,7 +25,7 @@ from .executorwebdriver import (
     WebDriverTestharnessExecutor,
     WebDriverTestharnessProtocolPart,
 )
-from .protocol import LeakProtocolPart, ProtocolPart
+from .protocol import LeakProtocolPart, ProtocolPart, ServiceWorkerProtocolPart
 
 here = os.path.dirname(__file__)
 
@@ -312,6 +312,23 @@ class ChromeDriverDevToolsProtocolPart(ProtocolPart):
                                                    body=body)
 
 
+class ChromeDriverServiceWorkerProtocolPart(ServiceWorkerProtocolPart):
+    def setup(self):
+        self.cdp = self.parent.cdp
+        self.webdriver = self.parent.webdriver
+
+    def terminate_service_worker(self, scope=None):
+        if scope is not None:
+            return self.webdriver.send_session_command(
+                "DELETE", "serviceworker", {"scope": scope})
+        # shortcut: browser-wide fallback until the scoped endpoint is common.
+        self.cdp.execute_cdp_command("ServiceWorker.enable")
+        try:
+            self.cdp.execute_cdp_command("ServiceWorker.stopAllWorkers")
+        finally:
+            self.cdp.execute_cdp_command("ServiceWorker.disable")
+
+
 class ChromeDriverTracingProtocolPart(ProtocolPart):
     name = "tracing"
 
@@ -350,6 +367,7 @@ class ChromeDriverProtocol(WebDriverProtocol):
         ChromeDriverBaseProtocolPart,
         ChromeDriverDevToolsProtocolPart,
         ChromeDriverFedCMProtocolPart,
+        ChromeDriverServiceWorkerProtocolPart,
         ChromeDriverTestDriverProtocolPart,
         ChromeDriverTestharnessProtocolPart,
         ChromeDriverTracingProtocolPart,
@@ -376,6 +394,7 @@ class ChromeDriverBidiProtocol(WebDriverBidiProtocol):
         ChromeDriverBaseProtocolPart,
         ChromeDriverDevToolsProtocolPart,
         ChromeDriverFedCMProtocolPart,
+        ChromeDriverServiceWorkerProtocolPart,
         ChromeDriverTestharnessProtocolPart,
         ChromeDriverTracingProtocolPart,
     ]
