@@ -43,6 +43,17 @@ function waitForLoad(t, target) {
   });
 }
 
+let sentinelCounter = 0;
+async function flushImagePipeline(t) {
+  const sentinel = document.createElement('img');
+  t.add_cleanup(() => sentinel.remove());
+  const loaded = waitForLoad(t, sentinel);
+  sentinel.src = `/images/green-1x1.png?sentinel-${++sentinelCounter}`;
+  document.body.appendChild(sentinel);
+  await loaded;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
 function check(imgOrPicture, img, refId) {
   const ref = document.getElementById(refId);
   const name = imgOrPicture.outerHTML;
@@ -55,7 +66,9 @@ function check(imgOrPicture, img, refId) {
     if (expect === '' || expect === null || expect === undefined) {
       assert_unreached('ref currentSrc was ' + format_value(expect));
     }
-    await waitForLoad(t, img);
+    const loaded = waitForLoad(t, img);
+    document.body.appendChild(imgOrPicture);
+    await loaded;
     t.step(() => {
       assert_greater_than(img.currentSrc.indexOf('?'), -1, 'expected a "?" in currentSrc');
       assert_equals(img.currentSrc.split('?')[0], expect);
@@ -218,7 +231,6 @@ function test_img(obj, i) {
     }
   }
   img.srcset = srcsetFor(`img${i}`, obj.h);
-  document.body.appendChild(img);
   check(img, img, obj.ref);
 }
 
@@ -244,7 +256,6 @@ function test_picture(obj, i) {
   source.srcset = srcsetFor(`picture${i}`, obj.h);
   picture.appendChild(source);
   picture.appendChild(img);
-  document.body.appendChild(picture);
   check(picture, img, obj.ref);
 }
 
@@ -289,7 +300,6 @@ onload = () => {
     img.loading = 'lazy';
     img.sizes = '(max-width: 0px) 1px, auto, cover 10px 10px, 1px';
     img.srcset = srcsetFor('lazy-nonfirst-auto', [' 1h', ' 2h']);
-    document.body.appendChild(img);
     check(img, img, 'ref2');
   }
 
@@ -305,7 +315,6 @@ onload = () => {
     img.height = 1;
     picture.appendChild(source);
     picture.appendChild(img);
-    document.body.appendChild(picture);
     check(picture, img, 'ref2');
   }
 
@@ -321,7 +330,6 @@ onload = () => {
     img.height = 1;
     picture.appendChild(source);
     picture.appendChild(img);
-    document.body.appendChild(picture);
     check(picture, img, 'ref1');
   }
 
@@ -336,7 +344,6 @@ onload = () => {
     img.height = 1;
     picture.appendChild(source);
     picture.appendChild(img);
-    document.body.appendChild(picture);
     check(picture, img, 'ref1');
   }
 
@@ -387,7 +394,7 @@ onload = () => {
     img.onload = img.onerror = () => { unexpectedEvent = true; };
     img.width = 20;
     img.height = 20;
-    await new Promise(resolve => t.step_timeout(resolve, 50));
+    await flushImagePipeline(t);
     assert_false(unexpectedEvent);
   }, 'Changing dimension attributes on an <img src> without srcset or <picture> does not fire load');
 
@@ -589,7 +596,7 @@ onload = () => {
     img.onload = img.onerror = () => { unexpectedEvent = true; };
     source.setAttribute('height', '100');
     source.removeAttribute('height');
-    await new Promise(resolve => t.step_timeout(resolve, 50));
+    await flushImagePipeline(t);
     assert_false(unexpectedEvent);
   }, 'A <source> sibling outside <picture> does not affect <img> aspect ratio or trigger load');
 
@@ -615,7 +622,7 @@ onload = () => {
     img.onload = img.onerror = () => { unexpectedEvent = true; };
     trailingSource.setAttribute('height', '100');
     trailingSource.removeAttribute('height');
-    await new Promise(resolve => t.step_timeout(resolve, 50));
+    await flushImagePipeline(t);
     assert_false(unexpectedEvent);
   }, 'A following <source> after <img> in <picture> does not affect <img> or trigger load');
 

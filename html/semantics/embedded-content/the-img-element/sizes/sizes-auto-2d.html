@@ -49,6 +49,17 @@ function baseUrl(url) {
   return url.split('?')[0];
 }
 
+let sentinelCounter = 0;
+async function flushImagePipeline(t) {
+  const sentinel = document.createElement('img');
+  t.add_cleanup(() => sentinel.remove());
+  const loaded = waitForLoad(t, sentinel);
+  sentinel.src = `/images/green-1x1.png?sentinel-${++sentinelCounter}`;
+  document.body.appendChild(sentinel);
+  await loaded;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
 function check(imgOrPicture, img, refId) {
   const ref = document.getElementById(refId);
   const name = imgOrPicture.outerHTML;
@@ -61,7 +72,9 @@ function check(imgOrPicture, img, refId) {
     if (expect === '' || expect === null || expect === undefined) {
       assert_unreached('ref currentSrc was ' + format_value(expect));
     }
-    await waitForLoad(t, img);
+    const loaded = waitForLoad(t, img);
+    document.body.appendChild(imgOrPicture);
+    await loaded;
     t.step(() => {
       assert_equals(baseUrl(img.currentSrc), expect);
     });
@@ -122,7 +135,6 @@ function test_img(obj, i) {
     }
   }
   img.srcset = srcsetFor(`img${i}`, obj.h);
-  document.body.appendChild(img);
   check(img, img, obj.ref);
 }
 
@@ -153,7 +165,6 @@ function test_picture(obj, i) {
   source.srcset = srcsetFor(`picture${i}`, obj.h);
   picture.appendChild(source);
   picture.appendChild(img);
-  document.body.appendChild(picture);
   check(picture, img, obj.ref);
 }
 
@@ -179,7 +190,6 @@ onload = () => {
     img.style = 'object-fit: cover';
     picture.appendChild(source);
     picture.appendChild(img);
-    document.body.appendChild(picture);
     check(picture, img, 'ref2');
   }
 
@@ -198,7 +208,6 @@ onload = () => {
     img.style = 'object-fit: cover';
     picture.appendChild(source);
     picture.appendChild(img);
-    document.body.appendChild(picture);
     check(picture, img, 'ref2');
   }
 
@@ -218,7 +227,6 @@ onload = () => {
     img.style = 'object-fit: cover';
     picture.appendChild(source);
     picture.appendChild(img);
-    document.body.appendChild(picture);
     check(picture, img, 'ref2');
   }
 
@@ -240,7 +248,6 @@ onload = () => {
     img.style = 'object-fit: cover';
     picture.appendChild(source);
     picture.appendChild(img);
-    document.body.appendChild(picture);
     check(picture, img, 'ref2');
   }
   {
@@ -258,7 +265,6 @@ onload = () => {
     img.style = 'object-fit: contain';
     picture.appendChild(source);
     picture.appendChild(img);
-    document.body.appendChild(picture);
     check(picture, img, 'ref1');
   }
 
@@ -277,7 +283,6 @@ onload = () => {
     img.style = 'width: 1000px; height: 10px; object-fit: contain';
     picture.appendChild(source);
     picture.appendChild(img);
-    document.body.appendChild(picture);
     check(picture, img, 'ref1');
   }
 
@@ -294,7 +299,6 @@ onload = () => {
     img.style = 'width: 1000px; height: 10px; object-fit: contain';
     picture.appendChild(source);
     picture.appendChild(img);
-    document.body.appendChild(picture);
     check(picture, img, 'ref1');
   }
 
@@ -309,8 +313,9 @@ onload = () => {
     img.sizes = 'auto';
     img.style = 'object-fit: contain';
     img.srcset = srcsetFor('dynamic-object-fit', [' 50h', ' 51h']);
+    const initialLoaded = waitForLoad(t, img);
     document.body.appendChild(img);
-    await waitForLoad(t, img);
+    await initialLoaded;
     assert_equals(baseUrl(img.currentSrc), ref1);
 
     const reloaded = waitForLoad(t, img);
@@ -326,18 +331,19 @@ onload = () => {
     const img = document.createElement('img');
     t.add_cleanup(() => img.remove());
     img.loading = 'lazy';
-    img.sizes = 'contain 10px 1000px';
+    img.sizes = 'contain 10px 1000px, 1000px';
     img.style = 'object-fit: contain';
     img.srcset = srcsetFor('non-auto-object-fit', [' 50h', ' 51h']);
+    const initialLoaded = waitForLoad(t, img);
     document.body.appendChild(img);
-    await waitForLoad(t, img);
+    await initialLoaded;
     assert_equals(baseUrl(img.currentSrc), ref1);
 
     let unexpectedEvent = false;
     img.onload = img.onerror = () => { unexpectedEvent = true; };
     img.style.objectFit = 'cover';
     img.getBoundingClientRect();
-    await new Promise(resolve => t.step_timeout(resolve, 50));
+    await flushImagePipeline(t);
     assert_false(unexpectedEvent);
     assert_equals(baseUrl(img.currentSrc), ref1);
   }, 'Changing computed object-fit when img does not allow auto-sizes does not fire load');
@@ -353,8 +359,9 @@ onload = () => {
     img.sizes = 'auto';
     img.style = 'height: 10px; object-fit: cover';
     img.srcset = srcsetFor('dynamic-content-box-height', [' 50h', ' 51h']);
+    const initialLoaded = waitForLoad(t, img);
     document.body.appendChild(img);
-    await waitForLoad(t, img);
+    await initialLoaded;
     assert_equals(baseUrl(img.currentSrc), ref1);
 
     const reloaded = waitForLoad(t, img);
@@ -376,8 +383,9 @@ onload = () => {
     img.height = 100;
     img.style = 'object-fit: cover';
     img.srcset = srcsetFor('dynamic-img-dims', ['', '']);
+    const initialLoaded = waitForLoad(t, img);
     document.body.appendChild(img);
-    await waitForLoad(t, img);
+    await initialLoaded;
     assert_equals(baseUrl(img.currentSrc), ref1);
 
     // Changing a dimension attribute without changing the selected candidate
@@ -385,7 +393,7 @@ onload = () => {
     let unexpectedEvent = false;
     img.onload = img.onerror = () => { unexpectedEvent = true; };
     img.height = 50;
-    await new Promise(resolve => t.step_timeout(resolve, 50));
+    await flushImagePipeline(t);
     assert_false(unexpectedEvent);
     assert_equals(baseUrl(img.currentSrc), ref1);
 
@@ -411,8 +419,9 @@ onload = () => {
       img.height = 1;
       img.style = 'width: 1000px; height: 10px; object-fit: contain';
       img.srcset = srcsetFor(`dynamic-img-remove-${attr}`, ['', '']);
+      const initialLoaded = waitForLoad(t, img);
       document.body.appendChild(img);
-      await waitForLoad(t, img);
+      await initialLoaded;
       assert_equals(baseUrl(img.currentSrc), ref1);
 
       const reloaded = waitForLoad(t, img);
@@ -439,8 +448,9 @@ onload = () => {
     img.style = 'object-fit: cover';
     picture.appendChild(source);
     picture.appendChild(img);
+    const initialLoaded = waitForLoad(t, img);
     document.body.appendChild(picture);
-    await waitForLoad(t, img);
+    await initialLoaded;
     assert_equals(baseUrl(img.currentSrc), ref1);
 
     const reloaded = waitForLoad(t, img);
@@ -468,8 +478,9 @@ onload = () => {
       img.style = 'width: 1000px; height: 10px; object-fit: contain';
       picture.appendChild(source);
       picture.appendChild(img);
+      const initialLoaded = waitForLoad(t, img);
       document.body.appendChild(picture);
-      await waitForLoad(t, img);
+      await initialLoaded;
       assert_equals(baseUrl(img.currentSrc), ref1);
 
       const reloaded = waitForLoad(t, img);
@@ -499,46 +510,51 @@ onload = () => {
   }, 'Changing dimension attributes when selected source URL is unchanged preserves layout disposition');
 
   // A display:none auto-sized img retains its two-dimensional last auto-sizes
-  // size (height and object-fit) on subsequent mutation, and resets it when
-  // disconnected from the document.
+  // size (width, height, and object-fit) on subsequent mutation even when the
+  // candidate aspect ratio changes, and resets it when disconnected.
   async_promise_test(async (t) => {
     const ref1 = document.getElementById('ref1').currentSrc.split('?')[0];
     const ref2 = document.getElementById('ref2').currentSrc.split('?')[0];
     const img = document.createElement('img');
     t.add_cleanup(() => img.remove());
     img.loading = 'lazy';
-    img.sizes = 'auto, contain 10px 1000px';
+    img.sizes = 'auto, contain 10px 1000px, 1000px';
     img.style = 'object-fit: cover';
-    img.srcset = srcsetFor('last-auto-sizes-initial', [' 50h', ' 51h']);
+    // Initial aspect ratio 0.1 gives max(10px, 100px * 0.1) = 10px (ref1),
+    // distinguishing caching the 2D tuple (10px, 100px, cover) from caching a
+    // 1D concrete width of 10px.
+    img.srcset = srcsetFor('last-auto-sizes-initial', [' 500h', ' 510h']);
+    const initialLoaded = waitForLoad(t, img);
     document.body.appendChild(img);
-    await waitForLoad(t, img);
-    assert_equals(baseUrl(img.currentSrc), ref2);
+    await initialLoaded;
+    assert_equals(baseUrl(img.currentSrc), ref1);
 
     // Hide the image first, then change object-fit to contain while unrendered.
     // Changing object-fit while display:none is not a relevant mutation (so
-    // img.complete remains true), and source selection while display:none must
-    // still use the last auto-sizes size (10px x 100px with cover).
+    // img.complete remains true), and source selection while display:none with
+    // wide aspect ratios (50, 25.5) must use the retained 2D tuple
+    // (10px, 100px, cover) -> 5000px / 2550px (ref2).
     img.style.display = 'none';
     img.getBoundingClientRect();
     img.style.objectFit = 'contain';
     img.getBoundingClientRect();
-    await new Promise(resolve => t.step_timeout(resolve, 20));
+    await flushImagePipeline(t);
     assert_true(img.complete, 'changing object-fit while display:none must not start a pending request');
 
     let reloaded = waitForLoad(t, img);
-    img.srcset = srcsetFor('last-auto-sizes-hidden', [' 50h', ' 51h']);
-    await new Promise(resolve => t.step_timeout(resolve, 0));
+    img.srcset = srcsetFor('last-auto-sizes-hidden', [' 1h', ' 2h']);
+    await new Promise(queueMicrotask);
     img.loading = 'eager';
     await reloaded;
     assert_equals(baseUrl(img.currentSrc), ref2);
 
     // Removing the image from the document clears its last auto-sizes size, so
-    // it falls back to 'contain 10px 1000px' (ref1).
+    // it falls back to 'contain 10px 1000px' -> 10px (ref1).
     img.loading = 'lazy';
     img.remove();
     reloaded = waitForLoad(t, img);
-    img.srcset = srcsetFor('last-auto-sizes-disconnected', [' 50h', ' 51h']);
-    await new Promise(resolve => t.step_timeout(resolve, 0));
+    img.srcset = srcsetFor('last-auto-sizes-disconnected', [' 1h', ' 2h']);
+    await new Promise(queueMicrotask);
     img.loading = 'eager';
     await reloaded;
     assert_equals(baseUrl(img.currentSrc), ref1);

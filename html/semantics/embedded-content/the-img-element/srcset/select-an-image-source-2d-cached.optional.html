@@ -166,9 +166,15 @@ promise_test(async t => {
   assert_equals(performance.getEntriesByName(uncachedUltra).length, 0);
 
   // Switching from cover to contain halves concreteWidth to 400px, making uncachedSmall 1x*dpr and loadedLarge 2x*dpr.
+  // Flush the image loading pipeline via a fresh sibling image load + rAF turns
+  // so any bogus asynchronous fetch would have started and recorded ResourceTiming.
+  let unexpectedEvent = false;
+  img.onload = img.onerror = () => { unexpectedEvent = true; };
   img.sizes = "contain 400px 400px, 100px";
-  await new Promise(resolve => t.step_timeout(resolve, 0));
+  await loadImg(t, { src: imageUrl("2d-shrink-sentinel") });
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
+  assert_false(unexpectedEvent, "shrinking 2D concrete width must not reload or fire load");
   assert_true(img.complete);
   assert_equals(img.currentSrc, loadedLarge);
   assert_equals(performance.getEntriesByName(uncachedSmall).length, 0);
