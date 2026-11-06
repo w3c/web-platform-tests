@@ -1,0 +1,33 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>HTML partial updates: script mutations during a template for patch have no active template status</title>
+<link rel="help" href="https://html.spec.whatwg.org/multipage/parsing.html#current-active-template">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="resources/mutation-records.js"></script>
+<div id="target"><?marker name="m"></div>
+<script>
+  const target = document.getElementById("target");
+  const getRecords = collectRecords(target, {
+    childList: true,
+    activeTemplateAttributeFilter: [],
+  });
+</script>
+<template for="m"><b>1</b><script>target.append(document.createElement("u"));</script><i>2</i></template>
+<script>
+  test(() => {
+    assert_array_equals(getRecords().map(describeRecord), [
+      `start: added [] removed [] between null and <?marker>`,
+      `update: added [<b>] removed [] between null and <?marker>`,
+      `update: added [<script>] removed [] between <b> and <?marker>`,
+      `null: added [<u>] removed [] between <?marker> and null`,
+      `update: added [<i>] removed [] between <script> and <?marker>`,
+      `end: added [] removed [<?marker>] between <i> and <u>`,
+    ]);
+    for (const record of getRecords()) {
+      if (record.activeTemplateStatus === null) {
+        assert_equals(record.activeTemplateAttributes, null);
+      }
+    }
+  }, "Mutations made by script while a template for is being parsed have null activeTemplateStatus");
+</script>

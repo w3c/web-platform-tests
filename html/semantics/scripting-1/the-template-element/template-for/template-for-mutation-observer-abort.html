@@ -1,0 +1,52 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>HTML partial updates: abort mutation records when parsing stops inside a template for</title>
+<link rel="help" href="https://html.spec.whatwg.org/multipage/parsing.html#abort-content-patching">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="resources/mutation-records.js"></script>
+<body>
+<script>
+  function startPatch(t) {
+    const iframe = document.createElement("iframe");
+    document.body.append(iframe);
+    t.add_cleanup(() => iframe.remove());
+    const doc = iframe.contentDocument;
+    doc.open();
+    doc.write(`<div id="target"><?start name="p">old<?end></div>`);
+    const target = doc.getElementById("target");
+    const getRecords = collectRecords(target, {
+      childList: true,
+      activeTemplateAttributeFilter: ["data-x"],
+    });
+    doc.write(`<template for="p" data-x="1"><b>new</b>`);
+    return { iframe, doc, target, getRecords };
+  }
+
+  function assertAborted(target, records) {
+    assert_array_equals(records.map(describeRecord), [
+      `start: added [] removed [<?start>, "old"] between null and <?end>`,
+      `update: added [<b>] removed [] between null and <?end>`,
+      `abort: added [] removed [] between null and null`,
+    ]);
+    for (const record of records) {
+      assert_equals(record.activeTemplateAttributes, records[0].activeTemplateAttributes);
+    }
+    assert_equals(records[0].activeTemplateAttributes["data-x"], "1");
+    assert_equals(target.lastChild.nodeType, Node.PROCESSING_INSTRUCTION_NODE);
+    assert_equals(target.lastChild.target, "end", "<?end> is not removed");
+  }
+
+  test(t => {
+    const { doc, target, getRecords } = startPatch(t);
+    doc.close();
+    assertAborted(target, getRecords());
+  }, "Reaching the end of the input before </template> queues an abort record");
+
+  test(t => {
+    const { iframe, target, getRecords } = startPatch(t);
+    iframe.contentWindow.stop();
+    assertAborted(target, getRecords());
+  }, "Aborting the parser before </template> queues an abort record");
+</script>
+</body>
