@@ -5,6 +5,11 @@ from ..undefined import UNDEFINED, Maybe
 
 
 class Autofill(BidiModule):
+    """
+    Represents the autofill module specified in
+    https://wicg.github.io/autofill-event/#webdriver-bidi-module
+    """
+
     @command
     def trigger(
         self,
@@ -13,6 +18,10 @@ class Autofill(BidiModule):
         card: Maybe[Mapping[str, Any]] = UNDEFINED,
         address: Maybe[Mapping[str, Any]] = UNDEFINED,
     ) -> Mapping[str, Any]:
+        """
+        Represents the `autofill.trigger` command specified in
+        https://wicg.github.io/autofill-event/#webdriver-bidi-trigger
+        """
         return {
             "context": context,
             "element": element,

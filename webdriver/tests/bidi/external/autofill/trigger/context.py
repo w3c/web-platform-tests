@@ -33,12 +33,8 @@ async def test_context(bidi_session, top_context, new_tab, load_form, get_elemen
 
 
 @pytest.mark.parametrize("domain", ["", "alt"], ids=["same_origin", "cross_origin"])
-async def test_iframe(bidi_session, new_tab, inline, iframe, get_element, domain):
-    await bidi_session.browsing_context.navigate(
-        context=new_tab["context"],
-        url=inline(CARD_FORM + iframe(CARD_FORM, domain=domain)),
-        wait="complete",
-    )
+async def test_iframe(bidi_session, new_tab, iframe, load_form, get_element, domain):
+    await load_form(CARD_FORM + iframe(CARD_FORM, domain=domain), context=new_tab)
 
     contexts = await bidi_session.browsing_context.get_tree(root=new_tab["context"])
     iframe_context = contexts[0]["children"][0]
@@ -68,13 +64,9 @@ async def test_iframe(bidi_session, new_tab, inline, iframe, get_element, domain
 
 @pytest.mark.parametrize("domain", ["", "alt"], ids=["same_origin", "cross_origin"])
 async def test_parent_context(
-    bidi_session, new_tab, inline, iframe, get_element, domain
+    bidi_session, new_tab, iframe, load_form, get_element, domain
 ):
-    await bidi_session.browsing_context.navigate(
-        context=new_tab["context"],
-        url=inline(CARD_FORM + iframe(CARD_FORM, domain=domain)),
-        wait="complete",
-    )
+    await load_form(CARD_FORM + iframe(CARD_FORM, domain=domain), context=new_tab)
 
     contexts = await bidi_session.browsing_context.get_tree(root=new_tab["context"])
     iframe_context = contexts[0]["children"][0]

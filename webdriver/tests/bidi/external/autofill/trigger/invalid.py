@@ -87,14 +87,18 @@ async def test_params_element_from_other_context(
         "document.querySelector('form')",
         "document.querySelector('#not-a-control')",
         "document.querySelector('#not-a-control').firstChild",
+        "document.querySelector('button')",
+        "document.querySelector('fieldset')",
+        "document.querySelector('output')",
     ],
-    ids=["form", "div", "text node"],
+    ids=["form", "div", "text node", "button", "fieldset", "output"],
 )
 async def test_params_element_not_form_control(
     bidi_session, top_context, load_form, expression
 ):
     await load_form(
         "<form><div id='not-a-control'>foo</div>"
+        "<button>bar</button><fieldset></fieldset><output></output>"
         "<input autocomplete='cc-number'></form>"
     )
     node = await bidi_session.script.evaluate(

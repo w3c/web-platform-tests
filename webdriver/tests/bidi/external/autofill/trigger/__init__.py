@@ -42,6 +42,35 @@ ADDRESS_FORM = """
 </form>
 """
 
+# A sample value for each `autofill.FieldName`.
+ADDRESS_FIELD_VALUES = {
+    "name": "John Smith",
+    "honorific-prefix": "Dr.",
+    "given-name": "John",
+    "additional-name": "Quincy",
+    "family-name": "Smith",
+    "honorific-suffix": "Jr.",
+    "nickname": "Johnny",
+    "organization": "Example Inc.",
+    "street-address": "123 Main St",
+    "address-line1": "123 Main St",
+    "address-line2": "Apt 4",
+    "address-line3": "Floor 2",
+    "address-level4": "Block 5",
+    "address-level3": "Mission District",
+    "address-level2": "San Francisco",
+    "address-level1": "CA",
+    "country": "US",
+    "country-name": "United States",
+    "postal-code": "94102",
+    "tel": "+16505551234",
+    "tel-country-code": "+1",
+    "tel-national": "6505551234",
+    "tel-area-code": "650",
+    "tel-local": "5551234",
+    "email": "john.smith@example.com",
+}
+
 
 async def get_form_control_values(bidi_session, context):
     """Returns the values of the form controls in `context`, keyed by id."""
