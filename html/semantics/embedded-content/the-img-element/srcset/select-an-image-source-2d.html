@@ -194,9 +194,12 @@ const explicit2DTests = [
   {
     desc: 'same w descriptor with different h descriptors is valid and normalizes each candidate using its own aspect ratio',
     sizes: 'cover 256px 256px, 2048px',
-    srcset: c => `${c('tall')} ${pair(2, 1, 2, 256)}, ${c('wide')} ${pair(1, 2, 1, 256)}, ${c('fallback-1d')} ${wOnly(1, 2048)}`,
+    srcset: c => {
+      const u = scaleUnit(1, 256);
+      return `${c('tall')} ${2 * u}w ${4 * u}h, ${c('wide')} ${2 * u}w ${u}h, ${c('fallback-1d')} ${wOnly(1, 2048)}`;
+    },
     expected: 'wide',
-    expectedDensity: exactDensity(1, 512),
+    expectedDensity: exactDensity(1, 256),
   },
   {
     desc: 'same w descriptor with and without h descriptor keeps both candidates during srcset parsing and normalizes per candidate',
@@ -213,7 +216,7 @@ const explicit2DTests = [
     sizes: 'cover 256px 256px, 2048px',
     srcset: c => `${c('dup-first')} ${pair(1, 2, 1, 256)}, ${c('dup-second')} ${pair(1, 2, 1, 256)}, ${c('fallback-1d')} ${wOnly(1, 2048)}`,
     expected: 'dup-first',
-    expectedDensity: exactDensity(1, 512),
+    expectedDensity: exactDensity(1, 256),
   },
   {
     desc: 'when 2D concrete width is 0px, a finite x descriptor >= DPR beats a w descriptor normalized to Infinity',
