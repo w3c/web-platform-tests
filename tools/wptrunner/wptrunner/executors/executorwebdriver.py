@@ -45,6 +45,7 @@ from .protocol import (BaseProtocolPart,
                        BidiUserAgentClientHintsProtocolPart,
                        BidiEventsProtocolPart,
                        BidiPermissionsProtocolPart,
+                       BidiBrowserProtocolPart,
                        BidiScriptProtocolPart,
                        DevicePostureProtocolPart,
                        StorageProtocolPart,
@@ -446,6 +447,25 @@ class WebDriverBidiPermissionsProtocolPart(BidiPermissionsProtocolPart):
             params["embedded_origin"] = embedded_origin
 
         return await self.webdriver.bidi_session.permissions.set_permission(**params)
+
+
+class WebDriverBidiBrowserProtocolPart(BidiBrowserProtocolPart):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.webdriver = None
+
+    def setup(self):
+        self.webdriver = self.parent.webdriver
+
+    async def create_temporary_directory(self, entries=None) -> Any:
+        params = {}
+        if entries is not None:
+            params["entries"] = entries
+        return await self.webdriver.bidi_session.browser.create_temporary_directory(**params)
+
+    async def set_file_dialog_behavior(self, file_dialog_behavior) -> Any:
+        return await self.webdriver.bidi_session.browser.set_file_dialog_behavior(
+            file_dialog_behavior=file_dialog_behavior)
 
 class WebDriverBidiWebExtensionsProtocolPart(WebExtensionsProtocolPart):
     def __init__(self, parent):
@@ -1194,6 +1214,7 @@ class WebDriverBidiProtocol(WebDriverProtocol):
                   WebDriverBidiEmulationProtocolPart,
                   WebDriverBidiEventsProtocolPart,
                   WebDriverBidiPermissionsProtocolPart,
+                  WebDriverBidiBrowserProtocolPart,
                   WebDriverBidiScriptProtocolPart,
                   WebDriverBidiWebExtensionsProtocolPart,
                   WebDriverBidiUserAgentClientHintsProtocolPart,

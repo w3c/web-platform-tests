@@ -35,6 +35,10 @@ class InvalidArgumentException(BidiException):
     error_code = "invalid argument"
 
 
+class InvalidBase64Exception(BidiException):
+    error_code = "invalid base64"
+
+
 class InvalidSelectorException(BidiException):
     error_code = "invalid selector"
 
