@@ -201,7 +201,10 @@ const explicit2DTests = [
   {
     desc: 'same w descriptor with and without h descriptor keeps both candidates during srcset parsing and normalizes per candidate',
     sizes: 'contain 512px 256px, 2048px',
-    srcset: c => `${c('no-h')} ${wOnly(0.5, 512)}, ${c('with-h')} ${pair(1, 1, 1, 256)}, ${c('fallback-1d')} ${wOnly(1, 2048)}`,
+    srcset: c => {
+      const u = scaleUnit(1, 256);
+      return `${c('no-h')} ${u}w, ${c('with-h')} ${u}w ${u}h, ${c('fallback-1d')} ${wOnly(1, 2048)}`;
+    },
     expected: 'with-h',
     expectedDensity: exactDensity(1, 256),
   },
@@ -391,17 +394,17 @@ promise_test(async t => {
   assert_implements(link.relList && link.relList.supports('preload'), 'preload not supported');
   link.rel = 'preload';
   link.as = 'image';
-  link.setAttribute('width', '1200');
-  link.setAttribute('height', '400');
-  link.imageSizes = 'cover 400px 1000px, 2000px';
-  link.imageSrcset = `${c('half-400')} ${wOnly(0.5, 400)}, ${c('exact-400')} ${wOnly(1, 400)}, ${c('exact-1200')} ${wOnly(1, 1200)}, ${c('exact-2000')} ${wOnly(1, 2000)}`;
+  link.setAttribute('width', '2048');
+  link.setAttribute('height', '512');
+  link.imageSizes = 'cover 512px 1024px, 4096px';
+  link.imageSrcset = `${c('half-512')} ${wOnly(0.5, 512)}, ${c('exact-512')} ${wOnly(1, 512)}, ${c('exact-2048')} ${wOnly(1, 2048)}, ${c('exact-4096')} ${wOnly(1, 4096)}`;
   const loaded = waitForLoad(t, link, 'link preload');
   document.head.appendChild(link);
   await loaded;
   const entries = performance.getEntriesByType('resource')
     .filter(e => e.name.includes(`id=${token}&`));
   assert_equals(entries.length, 1, 'exactly one candidate should be preloaded');
-  assert_equals(getSelectedCandidate(entries[0].name), 'exact-400');
+  assert_equals(getSelectedCandidate(entries[0].name), 'exact-512');
 }, '<link rel=preload as=image> ignores width/height attributes and uses null defaultAspectRatio for 2D selection');
 
 promise_test(async t => {
@@ -409,8 +412,8 @@ promise_test(async t => {
   const c = label => candidateUrl(label, token);
   const img = document.createElement('img');
   t.add_cleanup(() => img.remove());
-  img.sizes = 'cover 400px 400px';
-  img.srcset = `${c('bare-h')} 400h, ${c('zero-h')} 400w 0h, ${c('neg-h')} 400w -100h, ${c('float-h')} 400w 1.5h`;
+  img.sizes = 'cover 512px 512px';
+  img.srcset = `${c('bare-h')} 512h, ${c('zero-h')} 512w 0h, ${c('neg-h')} 512w -128h, ${c('float-h')} 512w 1.5h`;
   img.src = c('fallback');
   const loaded = waitForLoad(t, img, 'img');
   document.body.appendChild(img);
@@ -434,8 +437,8 @@ promise_test(async t => {
 
   const img = document.createElement('img');
   t.add_cleanup(() => img.remove());
-  img.sizes = 'cover 400px 400px, 800px';
-  img.srcset = `${cachedLow} ${pair(0.5, 3, 2, 200)}, ${uncachedExact} ${pair(1, 3, 2, 200)}, ${c('uncached-high')} ${pair(2, 3, 2, 200)}`;
+  img.sizes = 'cover 512px 512px, 1024px';
+  img.srcset = `${cachedLow} ${pair(0.5, 3, 2, 256)}, ${uncachedExact} ${pair(1, 3, 2, 256)}, ${c('uncached-high')} ${pair(2, 3, 2, 256)}`;
   const loaded = waitForLoad(t, img, 'img');
   document.body.appendChild(img);
   await loaded;
@@ -455,12 +458,12 @@ promise_test(async t => {
   document.body.appendChild(warm);
   await warmLoaded;
 
-  // 1:1 on cover 400x400 (concreteWidth=400) and 2:1 on cover 400x400 (concreteWidth=800)
+  // 1:1 on cover 512x512 (concreteWidth=512) and 2:1 on cover 512x512 (concreteWidth=1024)
   // have different w descriptors yet normalize to the exact same 2D density.
   const img = document.createElement('img');
   t.add_cleanup(() => img.remove());
-  img.sizes = 'cover 400px 400px, 1000px';
-  img.srcset = `${uncachedFirst} ${pair(1, 1, 1, 400)}, ${cachedDupSecond} ${pair(1, 2, 1, 400)}`;
+  img.sizes = 'cover 512px 512px, 2048px';
+  img.srcset = `${uncachedFirst} ${pair(1, 1, 1, 512)}, ${cachedDupSecond} ${pair(1, 2, 1, 512)}`;
   const loaded = waitForLoad(t, img, 'img');
   document.body.appendChild(img);
   await loaded;
@@ -484,8 +487,8 @@ promise_test(async t => {
 
   const img = document.createElement('img');
   t.add_cleanup(() => img.remove());
-  img.sizes = 'cover 400px 400px, 3000px';
-  img.srcset = `${uncached1x} ${pair(1, 3, 2, 200)}, ${cached2x} ${pair(2, 3, 2, 200)}, ${uncached3x} ${pair(3, 3, 2, 200)}, ${uncached6x} ${pair(6, 3, 2, 200)}`;
+  img.sizes = 'cover 512px 512px, 4096px';
+  img.srcset = `${uncached1x} ${pair(1, 3, 2, 256)}, ${cached2x} ${pair(2, 3, 2, 256)}, ${uncached3x} ${pair(3, 3, 2, 256)}, ${uncached6x} ${pair(6, 3, 2, 256)}`;
   const loaded = waitForLoad(t, img, 'img');
   document.body.appendChild(img);
   await loaded;
@@ -513,8 +516,8 @@ promise_test(async t => {
   t.add_cleanup(() => wrapper.remove());
   const img = document.createElement('img');
   img.style.zoom = '2';
-  img.sizes = 'cover 400px 400px, 800px';
-  img.srcset = `${c('exact')} ${pair(1, 3, 2, 200)}, ${c('double')} ${pair(2, 3, 2, 200)}`;
+  img.sizes = 'cover 512px 512px, 1024px';
+  img.srcset = `${c('exact')} ${pair(1, 3, 2, 256)}, ${c('double')} ${pair(2, 3, 2, 256)}`;
   const loaded = waitForLoad(t, img, 'img');
   wrapper.appendChild(img);
   document.body.appendChild(wrapper);
@@ -526,8 +529,8 @@ promise_test(async t => {
   const token = ++nextId;
   const c = label => candidateUrl(label, token);
   const iframe = await createZoomedIframe(t, 2, `<!doctype html>
-    <img sizes="cover 400px 400px, 2000px"
-         srcset="${c('1x')} ${pair(1, 3, 2, 200)}, ${c('2x')} ${pair(2, 3, 2, 200)}, ${c('4x')} ${pair(4, 3, 2, 200)}, ${c('8x')} ${pair(8, 3, 2, 200)}">`);
+    <img sizes="cover 512px 512px, 2048px"
+         srcset="${c('1x')} ${pair(1, 3, 2, 256)}, ${c('2x')} ${pair(2, 3, 2, 256)}, ${c('4x')} ${pair(4, 3, 2, 256)}, ${c('8x')} ${pair(8, 3, 2, 256)}">`);
   assert_equals(iframe.contentWindow.devicePixelRatio, 2 * dpr);
   const img = iframe.contentDocument.querySelector('img');
   assert_equals(getSelectedCandidate(img.currentSrc), '2x');
@@ -541,8 +544,8 @@ promise_test(async t => {
   assert_greater_than(childDpr, dpr);
 
   const img = iframe.contentDocument.createElement('img');
-  img.sizes = 'cover 400px 400px, 1000px';
-  img.srcset = `${c('low')} ${pair(0.75, 3, 2, 200, childDpr)}, ${c('exact')} ${pair(1, 3, 2, 200, childDpr)}, ${c('high')} ${pair(2, 3, 2, 200, childDpr)}`;
+  img.sizes = 'cover 512px 512px, 1024px';
+  img.srcset = `${c('low')} ${pair(0.75, 3, 2, 256, childDpr)}, ${c('exact')} ${pair(1, 3, 2, 256, childDpr)}, ${c('high')} ${pair(2, 3, 2, 256, childDpr)}`;
   const loaded = waitForLoad(t, img, 'fractional zoom img');
   iframe.contentDocument.body.appendChild(img);
   await loaded;
@@ -552,15 +555,15 @@ promise_test(async t => {
 promise_test(async t => {
   const token = ++nextId;
   const c = label => candidateUrl(label, token);
-  // With contain 800px 100px and width=100 height=100 (1:1), concreteWidth=100px so 'small' (1x*dpr) is selected.
-  // Removing `height` clears the dimension attribute aspect ratio so concreteWidth falls back to 800px,
-  // re-normalizing 'small' below DPR and selecting 'large' (1x*dpr at 800px) without mutating srcset.
+  // With contain 1024px 128px and width=128 height=128 (1:1), concreteWidth=128px so 'small' (1x*dpr) is selected.
+  // Removing `height` clears the dimension attribute aspect ratio so concreteWidth falls back to 1024px,
+  // re-normalizing 'small' below DPR and selecting 'large' (1x*dpr at 1024px) without mutating srcset.
   const img = document.createElement('img');
   t.add_cleanup(() => img.remove());
-  img.width = 100;
-  img.height = 100;
-  img.sizes = 'contain 800px 100px, 2000px';
-  img.srcset = `${c('small')} ${wOnly(1, 100)}, ${c('large')} ${wOnly(1, 800)}`;
+  img.width = 128;
+  img.height = 128;
+  img.sizes = 'contain 1024px 128px, 2048px';
+  img.srcset = `${c('small')} ${wOnly(1, 128)}, ${c('large')} ${wOnly(1, 1024)}`;
   const initialLoaded = waitForLoad(t, img, 'initial img');
   document.body.appendChild(img);
   await initialLoaded;
@@ -576,8 +579,8 @@ promise_test(async t => {
   const token = ++nextId;
   const c = label => candidateUrl(label, token);
   const iframe = await createZoomedIframe(t, 0.5, `<!doctype html>
-    <img sizes="contain 800px 400px, 1000px"
-         srcset="${c('half')} ${pair(1, 1, 1, 400, 0.5 * dpr)}, ${c('1x')} ${pair(1, 1, 1, 400)}, ${c('2x')} ${pair(2, 1, 1, 400)}">`);
+    <img sizes="contain 1024px 512px, 1024px"
+         srcset="${c('half')} ${pair(1, 1, 1, 512, 0.5 * dpr)}, ${c('1x')} ${pair(1, 1, 1, 512)}, ${c('2x')} ${pair(2, 1, 1, 512)}">`);
   assert_equals(iframe.contentWindow.devicePixelRatio, 0.5 * dpr);
   const img = iframe.contentDocument.querySelector('img');
   assert_equals(getSelectedCandidate(img.currentSrc), 'half');
@@ -593,8 +596,8 @@ promise_test(async t => {
   assert_implements(link.relList && link.relList.supports('preload'), 'preload not supported');
   link.rel = 'preload';
   link.as = 'image';
-  link.imageSizes = 'cover 400px 400px, 2000px';
-  link.imageSrcset = `${c('1x')} ${pair(1, 3, 2, 200)}, ${c('2x')} ${pair(2, 3, 2, 200)}, ${c('4x')} ${pair(4, 3, 2, 200)}, ${c('8x')} ${pair(8, 3, 2, 200)}`;
+  link.imageSizes = 'cover 512px 512px, 2048px';
+  link.imageSrcset = `${c('1x')} ${pair(1, 3, 2, 256)}, ${c('2x')} ${pair(2, 3, 2, 256)}, ${c('4x')} ${pair(4, 3, 2, 256)}, ${c('8x')} ${pair(8, 3, 2, 256)}`;
 
   const loaded = waitForLoad(t, link, 'zoomed iframe preload');
   iframe.contentDocument.body.appendChild(link);
@@ -609,45 +612,45 @@ promise_test(async t => {
 // sizes="auto" with object-fit normative selection tests on both <img> and <picture><source>.
 const auto2DTests = [
   {
-    desc: 'sizes="auto" with object-fit: cover on 200px x 200px box and 3:2 candidates (concreteWidth=300px) selects 1x DPR candidate',
-    style: 'width: 200px; height: 200px; object-fit: cover',
-    srcset: c => `${c('a')} ${pair(0.75, 3, 2, 100)}, ${c('b')} ${pair(1, 3, 2, 100)}, ${c('c')} ${pair(2, 3, 2, 100)}`,
+    desc: 'sizes="auto" with object-fit: cover on 256px x 256px box and 3:2 candidates (concreteWidth=384px) selects 1x DPR candidate',
+    style: 'width: 256px; height: 256px; object-fit: cover',
+    srcset: c => `${c('a')} ${pair(0.75, 3, 2, 128)}, ${c('b')} ${pair(1, 3, 2, 128)}, ${c('c')} ${pair(2, 3, 2, 128)}`,
     expected: 'b',
   },
   {
-    desc: 'sizes="auto" with object-fit: cover on 200px x 200px box and 3:2 candidates selects smallest density >= DPR (1.5x)',
-    style: 'width: 200px; height: 200px; object-fit: cover',
-    srcset: c => `${c('a')} ${pair(0.5, 3, 2, 100)}, ${c('b')} ${pair(0.75, 3, 2, 100)}, ${c('c')} ${pair(1.5, 3, 2, 100)}, ${c('d')} ${pair(2, 3, 2, 100)}`,
+    desc: 'sizes="auto" with object-fit: cover on 256px x 256px box and 3:2 candidates selects smallest density >= DPR (1.5x)',
+    style: 'width: 256px; height: 256px; object-fit: cover',
+    srcset: c => `${c('a')} ${pair(0.5, 3, 2, 128)}, ${c('b')} ${pair(0.75, 3, 2, 128)}, ${c('c')} ${pair(1.5, 3, 2, 128)}, ${c('d')} ${pair(2, 3, 2, 128)}`,
     expected: 'c',
   },
   {
-    desc: 'sizes="auto" with object-fit: contain on 200px x 100px box and 1:1 candidates (concreteWidth=100px) selects 1x DPR candidate',
-    style: 'width: 200px; height: 100px; object-fit: contain',
-    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 100)}, ${c('b')} ${pair(1, 1, 1, 100)}, ${c('c')} ${pair(2, 1, 1, 100)}`,
+    desc: 'sizes="auto" with object-fit: contain on 256px x 128px box and 1:1 candidates (concreteWidth=128px) selects 1x DPR candidate',
+    style: 'width: 256px; height: 128px; object-fit: contain',
+    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 128)}, ${c('b')} ${pair(1, 1, 1, 128)}, ${c('c')} ${pair(2, 1, 1, 128)}`,
     expected: 'b',
   },
   {
-    desc: 'sizes="auto" with object-fit: scale-down on 200px x 100px box and 1:1 candidates (concreteWidth=100px) selects 1x DPR candidate',
-    style: 'width: 200px; height: 100px; object-fit: scale-down',
-    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 100)}, ${c('b')} ${pair(1, 1, 1, 100)}, ${c('c')} ${pair(2, 1, 1, 100)}`,
+    desc: 'sizes="auto" with object-fit: scale-down on 256px x 128px box and 1:1 candidates (concreteWidth=128px) selects 1x DPR candidate',
+    style: 'width: 256px; height: 128px; object-fit: scale-down',
+    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 128)}, ${c('b')} ${pair(1, 1, 1, 128)}, ${c('c')} ${pair(2, 1, 1, 128)}`,
     expected: 'b',
   },
   {
-    desc: 'sizes="auto" with object-fit: fill on 200px x 100px box and 1:1 candidates (concreteWidth=200px) selects 1x DPR candidate',
-    style: 'width: 200px; height: 100px; object-fit: fill',
-    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 100)}, ${c('b')} ${pair(1, 1, 1, 100)}, ${c('c')} ${pair(1, 1, 1, 200)}`,
+    desc: 'sizes="auto" with object-fit: fill on 256px x 128px box and 1:1 candidates (concreteWidth=256px) selects 1x DPR candidate',
+    style: 'width: 256px; height: 128px; object-fit: fill',
+    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 128)}, ${c('b')} ${pair(1, 1, 1, 128)}, ${c('c')} ${pair(1, 1, 1, 256)}`,
     expected: 'c',
   },
   {
-    desc: 'sizes="auto" with object-fit: none on 200px x 100px box and 1:1 candidates (concreteWidth=200px) selects 1x DPR candidate',
-    style: 'width: 200px; height: 100px; object-fit: none',
-    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 100)}, ${c('b')} ${pair(1, 1, 1, 100)}, ${c('c')} ${pair(1, 1, 1, 200)}`,
+    desc: 'sizes="auto" with object-fit: none on 256px x 128px box and 1:1 candidates (concreteWidth=256px) selects 1x DPR candidate',
+    style: 'width: 256px; height: 128px; object-fit: none',
+    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 128)}, ${c('b')} ${pair(1, 1, 1, 128)}, ${c('c')} ${pair(1, 1, 1, 256)}`,
     expected: 'c',
   },
   {
-    desc: 'sizes="auto" with object-fit: contain on 100px x 0px box (concreteWidth=0px) normalizes to Infinity and keeps first candidate',
-    style: 'width: 100px; height: 0px; object-fit: contain',
-    srcset: c => `${c('first')} ${pair(2, 1, 1, 100)}, ${c('second')} ${pair(1, 1, 1, 100)}`,
+    desc: 'sizes="auto" with object-fit: contain on 128px x 0px box (concreteWidth=0px) normalizes to Infinity and keeps first candidate',
+    style: 'width: 128px; height: 0px; object-fit: contain',
+    srcset: c => `${c('first')} ${pair(2, 1, 1, 128)}, ${c('second')} ${pair(1, 1, 1, 128)}`,
     expected: 'first',
     expectedZeroNaturalDims: true,
   },
