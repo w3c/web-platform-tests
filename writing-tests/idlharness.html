@@ -129,6 +129,25 @@ other object will be.  Thus in the example code above, the harness would test th
 <code class="docutils literal notranslate"><span class="pre">Node</span></code>; but <code class="docutils literal notranslate"><span class="pre">document.head</span></code> would only be tested for <code class="docutils literal notranslate"><span class="pre">HTMLHeadElement</span></code>, and so on for further
 objects.</p>
 </section>
+<section id="set-test-filter-filter">
+<h3><code class="docutils literal notranslate"><span class="pre">set_test_filter(filter)</span></code><a class="headerlink" href="#set-test-filter-filter" title="Link to this heading">¶</a></h3>
+<p>Sets a predicate controlling which interface and member tests are generated.
+The predicate receives an interface name and, for member tests, a member name.
+It must return <code class="docutils literal notranslate"><span class="pre">true</span></code> to include the tests or <code class="docutils literal notranslate"><span class="pre">false</span></code> to exclude them.</p>
+<p>Interface-level and member-level filtering are independent: an interface’s
+members can be tested even when its interface-level checks are excluded.
+Constructors are part of the interface-level checks. IDL validation, dependency
+definitions, and structural checks for partial interfaces and mixins are
+unaffected. Already-untested definitions and members are not enabled by a filter.</p>
+<p>Call this method in the setup callback passed to <code class="docutils literal notranslate"><span class="pre">idl_test()</span></code>. Filtering is
+applied after merging partial interfaces and mixins, so mixin members are
+filtered using the name of the interface that includes them.</p>
+<p>For example, to exclude one operation while keeping the rest of an interface:</p>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="nx">idl_array</span><span class="p">.</span><span class="nx">set_test_filter</span><span class="p">((</span><span class="nx">name</span><span class="p">,</span><span class="w"> </span><span class="nx">memberName</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span>
+<span class="w">  </span><span class="o">!</span><span class="p">(</span><span class="nx">name</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">'Example'</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">memberName</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">'excludedOperation'</span><span class="p">));</span>
+</pre></div>
+</div>
+</section>
 </section>
 </section>
 
