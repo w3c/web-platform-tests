@@ -1,4 +1,5 @@
 <!doctype html>
+<meta charset="utf-8">
 <title>img parse a sizes attribute: two-dimensional sizes and srcset h descriptor</title>
 <link rel="help" href="https://html.spec.whatwg.org/multipage/images.html#parse-a-sizes-attribute">
 <link rel="help" href="https://html.spec.whatwg.org/multipage/images.html#source-concrete-width">
@@ -73,8 +74,8 @@ const tests = [
   {sizes: 'contain 1000px 10px', h: square, ref: 'ref1'},
   {sizes: 'CONTAIN 10px 1000px', h: square, ref: 'ref1'},
   {sizes: 'Contain 10px 1000px', h: square, ref: 'ref1'},
-  {sizes: 'cover 10px 1000px', h: square, ref: 'ref2'},
-  {sizes: 'cover 1000px 10px', h: square, ref: 'ref2'},
+  {sizes: 'cover 10px 1000px, 1px', h: square, ref: 'ref2'},
+  {sizes: 'cover 1000px 10px, 1px', h: square, ref: 'ref2'},
   {sizes: 'COVER 10px 1000px, 1px', h: square, ref: 'ref2'},
   {sizes: 'Cover 10px 1000px, 1px', h: square, ref: 'ref2'},
   {sizes: 'cover 0px 1000px, 1px', h: square, ref: 'ref2'},
@@ -110,81 +111,91 @@ const tests = [
   {sizes: 'contain 1px 100vh', h: square, ref: 'ref1'},
   {sizes: 'cover 100vw 1px, 1px', h: square, ref: 'ref2'},
   {sizes: 'contain 100vw 1px', h: square, ref: 'ref1'},
-  {sizes: 'contain 10px 1000px, cover 10px 1000px', h: square, ref: 'ref1'},
-  {sizes: 'cover 10px 1000px, 1px', h: square, ref: 'ref2'},
+  {sizes: 'contain 10px 1000px, cover 10px 1000px, 1000px', h: square, ref: 'ref1'},
   {sizes: 'contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
 
   // Media conditions with two-dimensional sizes.
-  {sizes: '(min-width: 0px) cover 10px 1000px, 1px', h: square, ref: 'ref2'},
-  {sizes: '(min-width: 0px)cover 10px 1000px, 1px', h: square, ref: 'ref2'},
-  {sizes: '(max-width: 0px) cover 10px 1000px, 1px', h: square, ref: 'ref1'},
-  {sizes: '(max-width: 0px) contain 10px 1000px, (min-width: 0px) cover 10px 1000px, 1px', h: square, ref: 'ref2'},
-  {sizes: '(max-width: 0px) cover 10px 1000px, contain 10px 1000px', h: square, ref: 'ref1'},
+  // For expected ref2 cases, use `cover 10px 10px, 1px` with `[' 1h', ' 2h']`
+  // so every token in `sizes` is <= 10px and a 1D parser that extracts a
+  // trailing length cannot accidentally select ref2.
+  {sizes: '(min-width: 0px) cover 10px 10px, 1px', h: [' 1h', ' 2h'], ref: 'ref2'},
+  {sizes: '(min-width: 0px)cover 10px 10px, 1px', h: [' 1h', ' 2h'], ref: 'ref2'},
+  {sizes: '(max-width: 0px) cover 10px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: '(max-width: 0px) contain 10px 1000px, (min-width: 0px) cover 10px 10px, 1px', h: [' 1h', ' 2h'], ref: 'ref2'},
+  {sizes: '(max-width: 0px) cover 10px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
   {sizes: '(min-width: 0px) contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
-  {sizes: '(max-width: 0px) contain 1000px 1000px, contain 10px 1000px', h: square, ref: 'ref1'},
+  {sizes: '(max-width: 0px) contain 1000px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
   {sizes: '(max-width: 0px) cover 10px 1000px, (min-width: 0px) contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
-  {sizes: 'not (max-width: 0px) cover 10px 1000px, 1px', h: square, ref: 'ref2'},
-  {sizes: 'not (min-width: 0px) cover 10px 1000px, 1px', h: square, ref: 'ref1'},
-  {sizes: '(min-width: 0px) and (min-height: 0px) cover 10px 1000px, 1px', h: square, ref: 'ref2'},
-  {sizes: '(min-width: 0px) and (max-height: 0px) cover 10px 1000px, 1px', h: square, ref: 'ref1'},
-  {sizes: '(max-width: 0px) or (min-height: 0px) cover 10px 1000px, 1px', h: square, ref: 'ref2'},
-  {sizes: '(width >= 0px) cover 10px 1000px, 1px', h: square, ref: 'ref2'},
-  {sizes: '(width < 0px) cover 10px 1000px, 1px', h: square, ref: 'ref1'},
+  {sizes: 'not (max-width: 0px) cover 10px 10px, 1px', h: [' 1h', ' 2h'], ref: 'ref2'},
+  {sizes: 'not (min-width: 0px) cover 10px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: '(min-width: 0px) and (min-height: 0px) cover 10px 10px, 1px', h: [' 1h', ' 2h'], ref: 'ref2'},
+  {sizes: '(min-width: 0px) and (max-height: 0px) cover 10px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: '(max-width: 0px) or (min-height: 0px) cover 10px 10px, 1px', h: [' 1h', ' 2h'], ref: 'ref2'},
+  {sizes: '(width >= 0px) cover 10px 10px, 1px', h: [' 1h', ' 2h'], ref: 'ref2'},
+  {sizes: '(width < 0px) cover 10px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
   // One-dimensional and two-dimensional sizes with media conditions mixed.
-  {sizes: '(max-width: 0px) 1px, (min-width: 0px) cover 10px 1000px, 1px', h: square, ref: 'ref2'},
-  {sizes: '(min-width: 0px) 1px, (min-width: 0px) cover 10px 1000px', h: square, ref: 'ref1'},
-  {sizes: '(min-width: 0px) cover 10px 1000px, (min-width: 0px) 1px', h: square, ref: 'ref2'},
+  {sizes: '(max-width: 0px) 1px, (min-width: 0px) cover 10px 10px, 1px', h: [' 1h', ' 2h'], ref: 'ref2'},
+  {sizes: '(min-width: 0px) contain 10px 1000px, (min-width: 0px) 1000px', h: square, ref: 'ref1'},
+  {sizes: '(min-width: 0px) cover 10px 10px, (min-width: 0px) 1px', h: [' 1h', ' 2h'], ref: 'ref2'},
 
-  // Invalid two-dimensional sizes are skipped.
-  {sizes: 'contain 1000px, 1px', h: [' 1h', ' 1h'], ref: 'ref1'},
-  {sizes: 'contain 1000px 1000px 1000px, 1px', h: [' 1h', ' 1h'], ref: 'ref1'},
-  {sizes: 'contain -1000px 1000px, 1px', h: [' 1h', ' 1h'], ref: 'ref1'},
-  {sizes: 'contain 1000px -1000px, 1px', h: [' 1h', ' 1h'], ref: 'ref1'},
-  {sizes: 'contain 1000 1000, 1px', h: [' 1h', ' 1h'], ref: 'ref1'},
-  {sizes: 'contain 1000px 100%, 1px', h: [' 1h', ' 1h'], ref: 'ref1'},
-  {sizes: 'fill 1000px 1000px, 1px', h: ['', ''], ref: 'ref1'},
-  {sizes: 'scale-down 1000px 1000px, 1px', h: ['', ''], ref: 'ref1'},
-  {sizes: '1000px 1000px, 1px', h: square, ref: 'ref1'},
-  {sizes: '1000px contain 1000px, 1px', h: square, ref: 'ref1'},
-  {sizes: 'contain cover 1000px 1000px, 1px', h: square, ref: 'ref1'},
-  {sizes: 'contain, 1px', h: square, ref: 'ref1'},
-  {sizes: 'cover 1000px var(--h, 1000px), 1px', h: square, ref: 'ref1'},
-  {sizes: '(min-width: 0px) cover 10px 1000px 1000px, 1px', h: square, ref: 'ref1'},
-  {sizes: '(min-width: 0px) contain 1000px, cover 10px 1000px, 1px', h: square, ref: 'ref2'},
+  // Invalid two-dimensional sizes are skipped in favor of a valid 2D item (with
+  // a 1000px 1D fallback so non-2D browsers fail instead of matching 1px).
+  {sizes: 'cover 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: 'cover 1000px 1000px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: 'cover -1000px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: 'cover 1000px -1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: 'cover 1000 1000, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: 'cover 1000px 100%, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: 'cover 100% 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: 'fill 1000px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: 'scale-down 1000px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: '1000px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: '1000px cover 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: 'contain cover 1000px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: 'contain, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: 'cover 1000px var(--h, 1000px), contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: '(min-width: 0px) cover 10px 1000px 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
+  {sizes: '(min-width: 0px) contain 1000px, contain 10px 1000px, 1000px', h: square, ref: 'ref1'},
 
   // Without 'h' descriptors, the dimension attribute aspect ratio is used:
-  // max(10px, 1000px * 1) = 1000px.
+  // max(10px, 1000px * 1) = 1000px, or max(10px, 10px * 100) = 1000px.
   {sizes: 'cover 10px 1000px, 1px', width: '1', height: '1', h: ['', ''], ref: 'ref2'},
-  {sizes: '(min-width: 0px) cover 10px 1000px, 1px', width: '1', height: '1', h: ['', ''], ref: 'ref2'},
+  {sizes: '(min-width: 0px) cover 10px 10px, 1px', width: '100', height: '1', h: ['', ''], ref: 'ref2'},
   // Decimal dimension values are valid per the rules for parsing dimension values.
   {sizes: 'cover 10px 1000px, 1px', width: '1.5', height: '1.5', h: ['', ''], ref: 'ref2'},
   // Zero, percentage, negative, or non-numeric dimension attributes give a null
-  // dimension attribute aspect ratio, so the width (10px) is used.
-  {sizes: 'cover 10px 1000px', width: '0', height: '1', h: ['', ''], ref: 'ref1'},
-  {sizes: 'cover 10px 1000px', width: '1', height: '0', h: ['', ''], ref: 'ref1'},
-  {sizes: 'cover 10px 1000px', width: '100%', height: '1', h: ['', ''], ref: 'ref1'},
-  {sizes: 'cover 10px 1000px', width: '1', height: '100%', h: ['', ''], ref: 'ref1'},
-  {sizes: 'cover 10px 1000px', width: '-1', height: '1', h: ['', ''], ref: 'ref1'},
-  {sizes: 'cover 10px 1000px', width: 'auto', height: '1', h: ['', ''], ref: 'ref1'},
+  // dimension attribute aspect ratio, so the box width is used rather than 0,
+  // negative, or +1 (-1/-1).
+  {sizes: 'contain 1000px 10px, 1px', width: '0', height: '1', h: ['', ''], ref: 'ref2'},
+  {sizes: 'cover 10px 1000px, 1000px', width: '1', height: '0', h: ['', ''], ref: 'ref1'},
+  {sizes: 'cover 10px 1000px, 1000px', width: '100%', height: '1', h: ['', ''], ref: 'ref1'},
+  {sizes: 'cover 10px 1000px, 1000px', width: '1', height: '100%', h: ['', ''], ref: 'ref1'},
+  {sizes: 'contain 1000px 10px, 1px', width: '-1', height: '1', h: ['', ''], ref: 'ref2'},
+  {sizes: 'cover 10px 1000px, 1000px', width: '-1', height: '-1', h: ['', ''], ref: 'ref1'},
+  {sizes: 'cover 10px 1000px, 1000px', width: 'auto', height: '1', h: ['', ''], ref: 'ref1'},
   // With no aspect ratio at all, the width is used.
-  {sizes: 'cover 10px 1000px', h: ['', ''], ref: 'ref1'},
-  // 'h' descriptors take precedence over the dimension attribute aspect ratio.
-  {sizes: 'cover 10px 10px', width: '1', height: '1', h: [' 50h', ' 51h'], ref: 'ref1'},
-  // Source aspect ratio is computed per candidate: when only the second
-  // candidate has an 'h' descriptor (51w 5100h -> aspect ratio 0.01 -> concrete
-  // width 10px), the first candidate (50w) uses the dimension attribute aspect
-  // ratio if present (100 -> concrete width 100000px -> density 0.0005, so the
-  // second candidate with density 5.1 is selected) and falls back to the box
-  // width (10px -> density 5.0, so the first candidate is selected) otherwise.
-  {sizes: 'cover 10px 1000px', h: ['', ' 5100h'], ref: 'ref1'},
+  {sizes: 'cover 10px 1000px, 1000px', h: ['', ''], ref: 'ref1'},
+  // 'h' descriptors take precedence over the dimension attribute aspect ratio
+  // in both directions.
+  {sizes: 'cover 10px 100px, 1px', width: '1', height: '10', h: [' 5h', ' 5h'], ref: 'ref2'},
+  {sizes: 'cover 10px 1000px, 1000px', width: '1', height: '1', h: [' 5000h', ' 5100h'], ref: 'ref1'},
+  // Source aspect ratio is computed per candidate:
+  // 1) In `contain 100px 10px, 100px`, candidate 1 (50w 500h -> ar 0.1 ->
+  //    concreteWidth 1px -> 50x) uses its 'h' descriptor while candidate 2
+  //    (51w -> no aspect ratio -> concreteWidth 100px -> 0.51x) falls back to
+  //    box width, so candidate 1 (ref1) wins if and only if candidate 1 uses 'h'.
+  // 2) In `cover 10px 1000px, 1px` with width=100 height=1, candidate 1 (50w ->
+  //    default ar 100 -> concreteWidth 100000px -> 0.0005x) uses default ar while
+  //    candidate 2 (51w 5100h -> ar 0.01 -> concreteWidth 10px -> 5.1x) uses 'h'.
+  {sizes: 'contain 100px 10px, 100px', h: [' 500h', ''], ref: 'ref1'},
   {sizes: 'cover 10px 1000px, 1px', width: '100', height: '1', h: ['', ' 5100h'], ref: 'ref2'},
   // An explicit fit in sizes is not affected by the computed 'object-fit'.
-  {sizes: 'contain 10px 1000px', style: 'object-fit: cover', h: square, ref: 'ref1'},
+  {sizes: 'contain 10px 1000px, 1000px', style: 'object-fit: cover', h: square, ref: 'ref1'},
   {sizes: 'cover 10px 1000px, 1px', style: 'object-fit: contain', h: square, ref: 'ref2'},
   // 'auto' on a non-lazy img is skipped in favor of the next source size, and
   // non-first 'auto' entries are ignored as invalid source-size items.
-  {sizes: 'auto, (min-width: 0px) cover 10px 1000px, 1px', h: square, ref: 'ref2'},
-  {sizes: '(max-width: 0px) 1px, auto, cover 10px 1000px, 1px', h: square, ref: 'ref2'},
+  {sizes: 'auto, (min-width: 0px) cover 10px 10px, 1px', h: [' 1h', ' 2h'], ref: 'ref2'},
+  {sizes: '(max-width: 0px) 1px, auto, cover 10px 10px, 1px', h: [' 1h', ' 2h'], ref: 'ref2'},
 ];
 
 function formatCandidate(url, w, h) {
@@ -271,6 +282,17 @@ onload = () => {
     test_link_preload(obj, i);
   }
 
+  // Non-first 'auto' on a lazy <img> does not satisfy allows auto-sizes and is
+  // skipped in favor of the subsequent 2D source size.
+  {
+    const img = document.createElement('img');
+    img.loading = 'lazy';
+    img.sizes = '(max-width: 0px) 1px, auto, cover 10px 10px, 1px';
+    img.srcset = srcsetFor('lazy-nonfirst-auto', [' 1h', ' 2h']);
+    document.body.appendChild(img);
+    check(img, img, 'ref2');
+  }
+
   // A source without width/height attributes uses the img's dimension
   // attribute aspect ratio.
   {
@@ -292,7 +314,7 @@ onload = () => {
     const picture = document.createElement('picture');
     const source = document.createElement('source');
     const img = document.createElement('img');
-    source.sizes = 'cover 10px 1000px';
+    source.sizes = 'cover 10px 1000px, 1000px';
     source.srcset = srcsetFor('picture-source-width-only', ['', '']);
     source.setAttribute('width', '1');
     img.width = 1;
@@ -307,7 +329,7 @@ onload = () => {
     const picture = document.createElement('picture');
     const source = document.createElement('source');
     const img = document.createElement('img');
-    source.sizes = 'cover 10px 1000px';
+    source.sizes = 'cover 10px 1000px, 1000px';
     source.srcset = srcsetFor('picture-source-height-only', ['', '']);
     source.setAttribute('height', '1');
     img.width = 1;
@@ -328,11 +350,11 @@ onload = () => {
     const source = document.createElement('source');
     const img = document.createElement('img');
     source.media = '(min-width: 0px)';
-    source.sizes = 'cover 10px 1000px';
+    source.sizes = 'cover 10px 1000px, 1px';
     source.srcset = srcsetFor('picture-fallback-source', ['', '']);
     source.setAttribute('width', '1');
     source.setAttribute('height', '1');
-    img.sizes = 'cover 10px 1000px';
+    img.sizes = 'cover 10px 1000px, 1000px';
     img.srcset = srcsetFor('picture-fallback-img', ['', '']);
     img.width = 1;
     img.height = 1000;
@@ -414,7 +436,7 @@ onload = () => {
     t.add_cleanup(() => picture.remove());
     const source = document.createElement('source');
     const img = document.createElement('img');
-    source.sizes = 'contain 10px 1000px';
+    source.sizes = 'contain 10px 1000px, 1000px';
     source.srcset = srcsetFor('dynamic-2d-sizes', square);
     picture.appendChild(source);
     picture.appendChild(img);
@@ -424,7 +446,7 @@ onload = () => {
     assert_equals(img.currentSrc.split('?')[0], ref1);
 
     loaded = waitForLoad(t, img);
-    source.sizes = 'cover 10px 1000px';
+    source.sizes = 'cover 10px 1000px, 1px';
     await loaded;
     assert_equals(img.currentSrc.split('?')[0], ref2);
   }, 'Dynamically mutating 2D sizes on <source> updates currentSrc');
@@ -457,7 +479,7 @@ onload = () => {
     const ref2 = document.getElementById('ref2').currentSrc.split('?')[0];
     const img = document.createElement('img');
     t.add_cleanup(() => img.remove());
-    img.sizes = 'contain 1000px 10px';
+    img.sizes = 'contain 1000px 10px, 1000px';
     img.srcset = srcsetFor('eager-img-remove-height', ['', '']);
     img.width = 1;
     img.height = 1;
@@ -503,7 +525,7 @@ onload = () => {
     t.add_cleanup(() => picture.remove());
     const source = document.createElement('source');
     const img = document.createElement('img');
-    source.sizes = 'contain 1000px 10px';
+    source.sizes = 'contain 1000px 10px, 1000px';
     source.srcset = srcsetFor('eager-source-remove-height', ['', '']);
     source.setAttribute('width', '1');
     source.setAttribute('height', '1');
@@ -532,7 +554,7 @@ onload = () => {
     link.as = 'image';
     link.setAttribute('width', '1');
     link.setAttribute('height', '1');
-    link.imageSizes = 'cover 10px 1000px';
+    link.imageSizes = 'cover 10px 1000px, 1000px';
     link.imageSrcset = srcsetFor('link-ignores-width-height', ['', '']);
     const loaded = waitForLoad(t, link);
     document.head.appendChild(link);
@@ -554,7 +576,7 @@ onload = () => {
     source.setAttribute('width', '1');
     source.setAttribute('height', '1');
     const img = document.createElement('img');
-    img.sizes = 'cover 10px 1000px';
+    img.sizes = 'cover 10px 1000px, 1000px';
     img.srcset = srcsetFor('non-picture-source-dims', ['', '']);
     div.appendChild(source);
     div.appendChild(img);
@@ -576,7 +598,7 @@ onload = () => {
     const picture = document.createElement('picture');
     t.add_cleanup(() => picture.remove());
     const img = document.createElement('img');
-    img.sizes = 'cover 10px 1000px';
+    img.sizes = 'cover 10px 1000px, 1000px';
     img.srcset = srcsetFor('following-source-dims', ['', '']);
     const trailingSource = document.createElement('source');
     trailingSource.srcset = srcsetFor('following-source-ignored', ['', '']);
