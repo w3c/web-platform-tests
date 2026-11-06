@@ -61,71 +61,71 @@ function exactDensity(mult, unitCount, ratio = dpr) {
 // Shared cases run on <img>, <picture><source>, and <link rel=preload>.
 const explicit2DTests = [
   {
-    desc: 'cover 400px 400px with 3:2 h descriptors (concreteWidth=600px) selects exact 1x DPR match',
-    sizes: 'cover 400px 400px',
-    srcset: c => `${c('a')} ${pair(0.5, 3, 2, 200)}, ${c('b')} ${pair(1, 3, 2, 200)}, ${c('c')} ${pair(2, 3, 2, 200)}`,
+    desc: 'cover 512px 512px with 3:2 h descriptors (concreteWidth=768px) selects exact 1x DPR match',
+    sizes: 'cover 512px 512px, 2048px',
+    srcset: c => `${c('a')} ${pair(0.5, 3, 2, 256)}, ${c('b')} ${pair(1, 3, 2, 256)}, ${c('c')} ${pair(2, 3, 2, 256)}`,
     expected: 'b',
-    expectedDensity: exactDensity(1, 200),
+    expectedDensity: exactDensity(1, 256),
   },
   {
-    desc: 'cover 400px 400px with unsorted 3:2 h descriptors (concreteWidth=600px) sorts and selects smallest density >= DPR',
-    sizes: 'cover 400px 400px, 100px',
-    srcset: c => `${c('d')} ${pair(2, 3, 2, 200)}, ${c('a')} ${pair(0.5, 3, 2, 200)}, ${c('c')} ${pair(1.5, 3, 2, 200)}, ${c('b')} ${pair(0.75, 3, 2, 200)}`,
+    desc: 'cover 512px 512px with unsorted 3:2 h descriptors (concreteWidth=768px) sorts and selects smallest density >= DPR',
+    sizes: 'cover 512px 512px, 128px',
+    srcset: c => `${c('d')} ${pair(2, 3, 2, 256)}, ${c('a')} ${pair(0.5, 3, 2, 256)}, ${c('c')} ${pair(1.5, 3, 2, 256)}, ${c('b')} ${pair(0.75, 3, 2, 256)}`,
     expected: 'c',
-    expectedDensity: exactDensity(1.5, 200),
+    expectedDensity: exactDensity(1.5, 256),
   },
   {
-    desc: 'cover 400px 400px with unsorted mixed h descriptors selects highest normalized density when all are < DPR',
-    sizes: 'cover 400px 400px',
-    srcset: c => `${c('d')} ${pair(0.45, 3, 1, 400)}, ${c('c')} ${pair(0.75, 3, 2, 200)}, ${c('a')} ${pair(0.25, 3, 2, 200)}, ${c('b')} ${pair(0.5, 3, 2, 200)}`,
+    desc: 'single-item cover 16px 64px with unsorted mixed h descriptors selects highest normalized density when all are < DPR',
+    sizes: 'cover 16px 64px',
+    srcset: c => `${c('d')} ${pair(0.45, 3, 1, 64)}, ${c('c')} ${pair(0.75, 3, 2, 32)}, ${c('a')} ${pair(0.25, 3, 2, 32)}, ${c('b')} ${pair(0.5, 3, 2, 32)}`,
     expected: 'c',
-    expectedDensity: exactDensity(0.75, 200),
+    expectedDensity: exactDensity(0.75, 32),
   },
   {
-    desc: 'contain 800px 400px with 1:1 h descriptors (concreteWidth=400px) selects exact 1x DPR match',
-    sizes: 'contain 800px 400px',
-    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 400)}, ${c('b')} ${pair(1, 1, 1, 400)}, ${c('c')} ${pair(2, 1, 1, 400)}`,
+    desc: 'contain 1024px 512px with 1:1 h descriptors (concreteWidth=512px) selects exact 1x DPR match',
+    sizes: 'contain 1024px 512px, 2048px',
+    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 512)}, ${c('b')} ${pair(1, 1, 1, 512)}, ${c('c')} ${pair(2, 1, 1, 512)}`,
     expected: 'b',
-    expectedDensity: exactDensity(1, 400),
+    expectedDensity: exactDensity(1, 512),
   },
   {
-    desc: 'contain 800px 400px with 1:1 h descriptors (concreteWidth=400px) selects smallest density >= DPR',
-    sizes: 'contain 800px 400px',
-    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 400)}, ${c('b')} ${pair(1.25, 1, 1, 400)}, ${c('c')} ${pair(2, 1, 1, 400)}`,
+    desc: 'contain 1024px 512px with 1:1 h descriptors (concreteWidth=512px) selects smallest density >= DPR',
+    sizes: 'contain 1024px 512px, 128px',
+    srcset: c => `${c('a')} ${pair(0.5, 1, 1, 512)}, ${c('b')} ${pair(1.25, 1, 1, 512)}, ${c('c')} ${pair(2, 1, 1, 512)}`,
     expected: 'b',
-    expectedDensity: exactDensity(1.25, 400),
+    expectedDensity: exactDensity(1.25, 512),
   },
   {
-    desc: 'mixed aspect ratios in srcset where larger w has smaller normalized density (800w/800px=1x vs 600w/400px=1.5x)',
-    sizes: 'cover 400px 400px, 100px',
-    srcset: c => `${c('a')} ${pair(1, 2, 1, 400)}, ${c('b')} ${pair(1.5, 1, 1, 400)}`,
+    desc: 'mixed aspect ratios in srcset where larger w has smaller normalized density (1024w/1024px=1x vs 768w/512px=1.5x)',
+    sizes: 'cover 512px 512px, 128px',
+    srcset: c => `${c('a')} ${pair(1, 2, 1, 512)}, ${c('b')} ${pair(1.5, 1, 1, 512)}`,
     expected: 'a',
-    expectedDensity: exactDensity(1, 400),
+    expectedDensity: exactDensity(1, 512),
   },
   {
-    desc: 'mixed aspect ratios in srcset where smaller w has larger normalized density (600w/800px=0.75x vs 400w/400px=1x)',
-    sizes: 'cover 400px 400px',
-    srcset: c => `${c('a')} ${pair(0.75, 2, 1, 400)}, ${c('b')} ${pair(1, 1, 1, 400)}`,
+    desc: 'mixed aspect ratios in srcset where smaller w has larger normalized density (768w/1024px=0.75x vs 512w/512px=1x)',
+    sizes: 'cover 512px 512px, 2048px',
+    srcset: c => `${c('a')} ${pair(0.75, 2, 1, 512)}, ${c('b')} ${pair(1, 1, 1, 512)}`,
     expected: 'b',
-    expectedDensity: exactDensity(1, 400),
+    expectedDensity: exactDensity(1, 512),
   },
   {
     desc: 'different w descriptors normalizing to equal 2D density deduplicate keeping first candidate (1:1 vs 2:1)',
-    sizes: 'cover 400px 400px, 1000px',
-    srcset: c => `${c('first')} ${pair(1, 1, 1, 400)}, ${c('second')} ${pair(1, 2, 1, 400)}, ${c('third')} ${pair(4, 1, 1, 400)}`,
+    sizes: 'cover 512px 512px, 1024px',
+    srcset: c => `${c('first')} ${pair(1, 1, 1, 512)}, ${c('second')} ${pair(1, 2, 1, 512)}, ${c('third')} ${pair(4, 1, 1, 512)}`,
     expected: 'first',
-    expectedDensity: exactDensity(1, 400),
+    expectedDensity: exactDensity(1, 512),
   },
   {
     desc: 'different w descriptors normalizing to equal 2D density deduplicate keeping first candidate (2:1 vs 1:1)',
-    sizes: 'cover 400px 400px, 100px',
-    srcset: c => `${c('first')} ${pair(1, 2, 1, 400)}, ${c('second')} ${pair(1, 1, 1, 400)}`,
+    sizes: 'cover 512px 512px, 128px',
+    srcset: c => `${c('first')} ${pair(1, 2, 1, 512)}, ${c('second')} ${pair(1, 1, 1, 512)}`,
     expected: 'first',
-    expectedDensity: exactDensity(1, 400),
+    expectedDensity: exactDensity(1, 512),
   },
   {
     desc: 'w+h candidate followed by x candidate with equal normalized density deduplicates keeping first',
-    sizes: 'cover 512px 512px',
+    sizes: 'cover 512px 512px, 2048px',
     srcset: c => `${c('first')} ${pair(1, 3, 2, 256)}, ${c('second')} ${exactDensity(1, 256)}x`,
     expected: 'first',
     expectedDensity: exactDensity(1, 256),
@@ -139,45 +139,45 @@ const explicit2DTests = [
   },
   {
     desc: 'cover 0px 0px normalizes all w candidates to Infinity and deduplicates keeping first candidate',
-    sizes: 'cover 0px 0px, 100px',
-    srcset: c => `${c('first')} ${pair(2, 1, 1, 400)}, ${c('second')} ${pair(0.5, 1, 1, 400)}, ${c('third')} ${pair(1, 1, 1, 400)}`,
+    sizes: 'cover 0px 0px, 128px',
+    srcset: c => `${c('first')} ${pair(2, 1, 1, 512)}, ${c('second')} ${pair(0.5, 1, 1, 512)}, ${c('third')} ${pair(1, 1, 1, 512)}`,
     expected: 'first',
     expectedZeroNaturalDims: true,
   },
   {
-    desc: 'contain 400px 0px (zero height) normalizes all w+h candidates to Infinity and deduplicates keeping first candidate',
-    sizes: 'contain 400px 0px, 100px',
-    srcset: c => `${c('first')} ${pair(2, 3, 2, 200)}, ${c('second')} ${pair(1, 3, 2, 200)}`,
+    desc: 'contain 512px 0px (zero height) normalizes all w+h candidates to Infinity and deduplicates keeping first candidate',
+    sizes: 'contain 512px 0px, 128px',
+    srcset: c => `${c('first')} ${pair(2, 3, 2, 256)}, ${c('second')} ${pair(1, 3, 2, 256)}`,
     expected: 'first',
     expectedZeroNaturalDims: true,
   },
   {
-    desc: 'contain 0px 400px (zero width) normalizes all w+h candidates to Infinity and deduplicates keeping first candidate',
-    sizes: 'contain 0px 400px, 100px',
-    srcset: c => `${c('first')} ${pair(2, 3, 2, 200)}, ${c('second')} ${pair(1, 3, 2, 200)}`,
+    desc: 'contain 0px 512px (zero width) normalizes all w+h candidates to Infinity and deduplicates keeping first candidate',
+    sizes: 'contain 0px 512px, 128px',
+    srcset: c => `${c('first')} ${pair(2, 3, 2, 256)}, ${c('second')} ${pair(1, 3, 2, 256)}`,
     expected: 'first',
     expectedZeroNaturalDims: true,
   },
   {
-    desc: 'cover 0px 400px with 3:2 h descriptors uses scaledWidth=600px (non-zero) and selects exact 1x DPR match',
-    sizes: 'cover 0px 400px',
-    srcset: c => `${c('a')} ${pair(0.5, 3, 2, 200)}, ${c('b')} ${pair(1, 3, 2, 200)}, ${c('c')} ${pair(2, 3, 2, 200)}`,
+    desc: 'cover 0px 512px with 3:2 h descriptors uses scaledWidth=768px (non-zero) and selects exact 1x DPR match',
+    sizes: 'cover 0px 512px, 2048px',
+    srcset: c => `${c('a')} ${pair(0.5, 3, 2, 256)}, ${c('b')} ${pair(1, 3, 2, 256)}, ${c('c')} ${pair(2, 3, 2, 256)}`,
     expected: 'b',
-    expectedDensity: exactDensity(1, 200),
+    expectedDensity: exactDensity(1, 256),
   },
   {
     desc: 'matching media condition before 2D source size selects normalized density from 2D entry',
-    sizes: '(min-width: 1px) cover 400px 400px, 1200px',
-    srcset: c => `${c('a')} ${pair(1, 3, 2, 200)}, ${c('b')} ${pair(2, 3, 2, 200)}`,
+    sizes: '(min-width: 1px) cover 512px 512px, 2048px',
+    srcset: c => `${c('pre')} ${pair(1, 2, 1, 256)}, ${c('a')} ${pair(1, 3, 2, 256)}, ${c('b')} ${pair(2, 3, 2, 256)}`,
     expected: 'a',
-    expectedDensity: exactDensity(1, 200),
+    expectedDensity: exactDensity(1, 256),
   },
   {
-    desc: 'non-matching media condition before 2D source size falls back to next source size',
-    sizes: '(max-width: 0px) cover 400px 400px, 1200px',
-    srcset: c => `${c('a')} ${pair(1, 3, 2, 200)}, ${c('b')} ${pair(2, 3, 2, 200)}`,
-    expected: 'b',
-    expectedDensity: scaleUnit(2, 200) * 3 / 1200,
+    desc: 'non-matching media condition before 2D source size falls back to next 2D source size',
+    sizes: '(max-width: 0px) cover 1024px 512px, contain 1024px 512px, 2048px',
+    srcset: c => `${c('a')} ${pair(1, 1, 1, 512)}, ${c('b')} ${pair(2, 1, 1, 512)}, ${c('c')} ${pair(4, 1, 1, 512)}`,
+    expected: 'a',
+    expectedDensity: exactDensity(1, 512),
   },
 ];
 
@@ -216,6 +216,13 @@ for (const tc of explicit2DTests) {
     document.body.appendChild(picture);
     await loaded;
     assert_equals(getSelectedCandidate(img.currentSrc), tc.expected);
+    if (tc.expectedZeroNaturalDims) {
+      assert_equals(img.naturalWidth, 0);
+      assert_equals(img.naturalHeight, 0);
+    } else if (tc.expectedDensity !== undefined) {
+      assert_equals(img.naturalWidth, Math.floor(16 / tc.expectedDensity));
+      assert_equals(img.naturalHeight, Math.floor(16 / tc.expectedDensity));
+    }
   }, `<picture><source>: ${tc.desc}`);
 
   promise_test(async t => {
@@ -246,7 +253,7 @@ promise_test(async t => {
   t.add_cleanup(() => img.remove());
   img.width = 600;
   img.height = 400;
-  img.sizes = 'cover 400px 400px';
+  img.sizes = 'cover 400px 400px, 2000px';
   img.srcset = `${c('a')} ${wOnly(0.5, 600)}, ${c('b')} ${wOnly(1, 600)}, ${c('c')} ${wOnly(2, 600)}`;
   const loaded = waitForLoad(t, img, 'img');
   document.body.appendChild(img);
@@ -281,7 +288,7 @@ promise_test(async t => {
   t.add_cleanup(() => picture.remove());
   source.setAttribute('width', '600');
   source.setAttribute('height', '400');
-  source.sizes = 'cover 400px 400px';
+  source.sizes = 'cover 400px 400px, 2000px';
   source.srcset = `${c('a')} ${wOnly(0.5, 600)}, ${c('b')} ${wOnly(1, 600)}, ${c('c')} ${wOnly(2, 600)}`;
   img.width = 400;
   img.height = 400;
@@ -299,7 +306,7 @@ promise_test(async t => {
   const source = document.createElement('source');
   const img = document.createElement('img');
   t.add_cleanup(() => picture.remove());
-  source.sizes = 'cover 400px 400px';
+  source.sizes = 'cover 400px 400px, 2000px';
   source.srcset = `${c('a')} ${wOnly(0.5, 600)}, ${c('b')} ${wOnly(1, 600)}, ${c('c')} ${wOnly(2, 600)}`;
   img.width = 600;
   img.height = 400;
@@ -414,7 +421,7 @@ promise_test(async t => {
   // have different w descriptors yet normalize to the exact same 2D density.
   const img = document.createElement('img');
   t.add_cleanup(() => img.remove());
-  img.sizes = 'cover 400px 400px';
+  img.sizes = 'cover 400px 400px, 1000px';
   img.srcset = `${uncachedFirst} ${pair(1, 1, 1, 400)}, ${cachedDupSecond} ${pair(1, 2, 1, 400)}`;
   const loaded = waitForLoad(t, img, 'img');
   document.body.appendChild(img);
@@ -514,7 +521,7 @@ promise_test(async t => {
   t.add_cleanup(() => img.remove());
   img.width = 100;
   img.height = 100;
-  img.sizes = 'contain 800px 100px';
+  img.sizes = 'contain 800px 100px, 2000px';
   img.srcset = `${c('small')} ${wOnly(1, 100)}, ${c('large')} ${wOnly(1, 800)}`;
   const initialLoaded = waitForLoad(t, img, 'initial img');
   document.body.appendChild(img);
@@ -639,6 +646,13 @@ for (const tc of auto2DTests) {
     document.body.appendChild(picture);
     await loaded;
     assert_equals(getSelectedCandidate(img.currentSrc), tc.expected);
+    if (tc.expectedZeroNaturalDims) {
+      assert_equals(img.naturalWidth, 0);
+      assert_equals(img.naturalHeight, 0);
+    } else if (tc.expectedDensity !== undefined) {
+      assert_equals(img.naturalWidth, Math.floor(16 / tc.expectedDensity));
+      assert_equals(img.naturalHeight, Math.floor(16 / tc.expectedDensity));
+    }
   }, `<picture><source>: ${tc.desc}`);
 }
 </script>
