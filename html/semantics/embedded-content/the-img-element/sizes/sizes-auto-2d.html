@@ -1,4 +1,5 @@
 <!doctype html>
+<meta charset="utf-8">
 <title>img parse a sizes attribute: two-dimensional sizes=auto</title>
 <link rel="help" href="https://html.spec.whatwg.org/multipage/images.html#parse-a-sizes-attribute">
 <link rel="help" href="https://html.spec.whatwg.org/multipage/images.html#source-concrete-width">
@@ -73,28 +74,38 @@ const tests = [
   {loading: 'lazy', sizes: 'auto', width: '1', height: '1', h: ['', ''], ref: 'ref1'},
   {loading: 'lazy', sizes: 'auto', width: '1', height: '1', style: 'object-fit: fill', h: ['', ''], ref: 'ref1'},
   {loading: 'lazy', sizes: 'auto', width: '1', height: '1', style: 'object-fit: none', h: ['', ''], ref: 'ref1'},
-  {loading: 'lazy', sizes: 'auto', width: '1', height: '1', style: 'object-fit: contain', h: ['', ''], ref: 'ref1'},
-  {loading: 'lazy', sizes: 'auto', width: '1', height: '1', style: 'object-fit: scale-down', h: ['', ''], ref: 'ref1'},
+  {loading: 'lazy', sizes: 'auto', width: '1', height: '1', style: 'width: 100px; height: 10px; object-fit: fill', h: ['', ''], ref: 'ref2'},
+  {loading: 'lazy', sizes: 'auto', width: '1', height: '1', style: 'width: 100px; height: 10px; object-fit: none', h: ['', ''], ref: 'ref2'},
+  {loading: 'lazy', sizes: 'auto', width: '1', height: '1', style: 'width: 1000px; height: 10px; object-fit: contain', h: ['', ''], ref: 'ref1'},
+  {loading: 'lazy', sizes: 'auto', width: '1', height: '1', style: 'width: 1000px; height: 10px; object-fit: scale-down', h: ['', ''], ref: 'ref1'},
   // With object-fit: cover and aspect ratio 1, max(10px, 100px * 1) = 100px.
   {loading: 'lazy', sizes: 'auto', width: '1', height: '1', style: 'object-fit: cover', h: ['', ''], ref: 'ref2'},
-  // Without width/height attributes or 'h' descriptors, the width (10px) is used.
-  {loading: 'lazy', sizes: 'auto', style: 'object-fit: cover', h: ['', ''], ref: 'ref1'},
-  {loading: 'lazy', sizes: 'auto', width: '1', style: 'object-fit: cover', h: ['', ''], ref: 'ref1'},
-  {loading: 'lazy', sizes: 'auto', height: '1', style: 'object-fit: cover', h: ['', ''], ref: 'ref1'},
+  // Without both width and height attributes, the second candidate (no 'h') has
+  // no aspect ratio and uses the box width (1000px -> 0.051x), while the first
+  // candidate ('50h' -> 1:1) uses min(1000px, 10px) = 10px -> 5.0x (ref1).
+  {loading: 'lazy', sizes: 'auto', style: 'width: 1000px; height: 10px; object-fit: contain', h: [' 50h', ''], ref: 'ref1'},
+  {loading: 'lazy', sizes: 'auto', width: '1', style: 'width: 1000px; height: 10px; object-fit: contain', h: [' 50h', ''], ref: 'ref1'},
+  {loading: 'lazy', sizes: 'auto', height: '1', style: 'width: 1000px; height: 10px; object-fit: contain', h: [' 50h', ''], ref: 'ref1'},
   // 'h' descriptors give aspect ratios of 50 and 25.5;
   // max(10px, 100px * 50) = 5000px and max(10px, 100px * 25.5) = 2550px.
   {loading: 'lazy', sizes: 'auto', style: 'object-fit: cover', h: [' 1h', ' 2h'], ref: 'ref2'},
-  // ... and min(10px, 100px * 50) = min(10px, 100px * 25.5) = 10px.
-  {loading: 'lazy', sizes: 'auto', style: 'object-fit: contain', h: [' 1h', ' 2h'], ref: 'ref1'},
-  {loading: 'lazy', sizes: 'auto', style: 'object-fit: scale-down', h: [' 1h', ' 2h'], ref: 'ref1'},
-  // 'h' descriptors take precedence over the dimension attribute aspect ratio:
-  // aspect ratios are 50/500 = 0.1 and 51/510 = 0.1, so max(10px, 100px * 0.1) = 10px.
-  {loading: 'lazy', sizes: 'auto', width: '10', height: '1', style: 'object-fit: cover', h: [' 500h', ' 510h'], ref: 'ref1'},
+  // With 1000px x 10px and aspect ratio ~1, contain and scale-down give
+  // min(1000px, 10px) = 10px (ref1), whereas 1D sizes=auto uses 1000px (ref2).
+  {loading: 'lazy', sizes: 'auto', style: 'width: 1000px; height: 10px; object-fit: contain', h: [' 50h', ' 51h'], ref: 'ref1'},
+  {loading: 'lazy', sizes: 'auto', style: 'width: 1000px; height: 10px; object-fit: scale-down', h: [' 50h', ' 51h'], ref: 'ref1'},
+  // 'h' descriptors take precedence over the dimension attribute aspect ratio
+  // in both directions.
+  {loading: 'lazy', sizes: 'auto', width: '1', height: '100', style: 'object-fit: cover', h: [' 1h', ' 2h'], ref: 'ref2'},
+  {loading: 'lazy', sizes: 'auto', width: '100', height: '1', style: 'width: 1000px; height: 10px; object-fit: contain', h: [' 5000h', ' 5100h'], ref: 'ref1'},
   // Content box, not border box, is used for both width and height:
-  // - padding: 0 45px reduces content-box width from 100px to 10px, so contain gives min(10px, 100px) = 10px (ref1).
-  // - padding: 45px 0 reduces content-box height from 100px to 10px, so cover gives max(10px, 10px) = 10px (ref1).
-  {loading: 'lazy', sizes: 'auto', style: 'object-fit: contain; box-sizing: border-box; width: 100px; height: 100px; padding: 0 45px', h: [' 50h', ' 51h'], ref: 'ref1'},
-  {loading: 'lazy', sizes: 'auto', style: 'object-fit: cover; box-sizing: border-box; width: 10px; height: 100px; padding: 45px 0', h: [' 50h', ' 51h'], ref: 'ref1'},
+  // - padding: 0 4px on 10x10 border-box gives content-box 2x10, so cover gives
+  //   max(2px, 1px) = 2px (25x) vs max(2px, 10px) = 10px (5.1x) -> ref2
+  //   (whereas border-box 10x10 gives 5.0x vs 5.1x -> ref1, and 1D gives ref1).
+  // - padding: 45px 0 on 1000x100 border-box gives content-box 1000x10, so
+  //   contain gives min(1000px, 10px) = 10px -> ref1 (whereas border-box
+  //   1000x100 gives 100px -> ref2, and 1D 1000px gives ref2).
+  {loading: 'lazy', sizes: 'auto', style: 'object-fit: cover; box-sizing: border-box; width: 10px; height: 10px; padding: 0 4px', h: [' 500h', ' 51h'], ref: 'ref2'},
+  {loading: 'lazy', sizes: 'auto', style: 'object-fit: contain; box-sizing: border-box; width: 1000px; height: 100px; padding: 45px 0', h: [' 50h', ' 51h'], ref: 'ref1'},
   // Non-lazy img falls back to 1px and does not use CSS object-fit.
   {sizes: 'auto, 1px', width: '1', height: '1', style: 'object-fit: cover', h: [' 1h', ' 2h'], ref: 'ref1'},
 ];
@@ -237,14 +248,14 @@ onload = () => {
     const source = document.createElement('source');
     const img = document.createElement('img');
     source.srcset = srcsetFor('picture-source-presentational-hint-small', [' 50h', ' 51h']);
-    source.setAttribute('width', '10');
+    source.setAttribute('width', '1000');
     source.setAttribute('height', '10');
     img.loading = 'lazy';
     img.sizes = 'auto';
-    img.width = 10;
-    img.height = 100;
+    img.width = 1000;
+    img.height = 200;
     img.className = 'use-pres-hint';
-    img.style = 'object-fit: cover';
+    img.style = 'object-fit: contain';
     picture.appendChild(source);
     picture.appendChild(img);
     document.body.appendChild(picture);
@@ -257,13 +268,13 @@ onload = () => {
     const picture = document.createElement('picture');
     const source = document.createElement('source');
     const img = document.createElement('img');
-    source.srcset = srcsetFor('picture-source-width-only', ['', '']);
+    source.srcset = srcsetFor('picture-source-width-only', [' 50h', '']);
     source.setAttribute('width', '1');
     img.loading = 'lazy';
     img.sizes = 'auto';
-    img.width = 1;
-    img.height = 1;
-    img.style = 'object-fit: cover';
+    img.width = 52;
+    img.height = 50;
+    img.style = 'width: 1000px; height: 10px; object-fit: contain';
     picture.appendChild(source);
     picture.appendChild(img);
     document.body.appendChild(picture);
@@ -274,13 +285,13 @@ onload = () => {
     const picture = document.createElement('picture');
     const source = document.createElement('source');
     const img = document.createElement('img');
-    source.srcset = srcsetFor('picture-source-height-only', ['', '']);
+    source.srcset = srcsetFor('picture-source-height-only', [' 50h', '']);
     source.setAttribute('height', '1');
     img.loading = 'lazy';
     img.sizes = 'auto';
-    img.width = 1;
-    img.height = 1;
-    img.style = 'object-fit: cover';
+    img.width = 52;
+    img.height = 50;
+    img.style = 'width: 1000px; height: 10px; object-fit: contain';
     picture.appendChild(source);
     picture.appendChild(img);
     document.body.appendChild(picture);
