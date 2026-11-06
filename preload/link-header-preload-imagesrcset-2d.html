@@ -18,6 +18,7 @@ const headerGroups = [
     "resources/square.png?from-2d-header&cover-1x",
     "resources/square.png?from-2d-header&cover-2x",
     "resources/square.png?from-2d-header&cover-4x",
+    "resources/square.png?from-2d-header&cover-8x",
   ],
   [
     "resources/square.png?from-2d-header&base2",
@@ -25,6 +26,7 @@ const headerGroups = [
     "resources/square.png?from-2d-header&contain-1x",
     "resources/square.png?from-2d-header&contain-2x",
     "resources/square.png?from-2d-header&contain-4x",
+    "resources/square.png?from-2d-header&contain-8x",
   ],
   [
     "resources/square.png?from-2d-header&base3",
@@ -32,6 +34,7 @@ const headerGroups = [
     "resources/square.png?from-2d-header&dup-second",
     "resources/square.png?from-2d-header&dup-2x",
     "resources/square.png?from-2d-header&dup-4x",
+    "resources/square.png?from-2d-header&dup-8x",
   ],
   [
     "resources/square.png?from-2d-header&base4",
@@ -39,6 +42,7 @@ const headerGroups = [
     "resources/square.png?from-2d-header&wonly-1x",
     "resources/square.png?from-2d-header&wonly-2x",
     "resources/square.png?from-2d-header&wonly-4x",
+    "resources/square.png?from-2d-header&wonly-8x",
   ],
 ];
 
@@ -57,18 +61,24 @@ if (dpr <= 0.5) {
   expected.set("resources/square.png?from-2d-header&cover-2x", 1);
   expected.set("resources/square.png?from-2d-header&contain-2x", 1);
   expected.set("resources/square.png?from-2d-header&wonly-2x", 1);
-} else {
+} else if (dpr <= 4) {
   expected.set("resources/square.png?from-2d-header&cover-4x", 1);
   expected.set("resources/square.png?from-2d-header&contain-4x", 1);
   expected.set("resources/square.png?from-2d-header&wonly-4x", 1);
+} else {
+  expected.set("resources/square.png?from-2d-header&cover-8x", 1);
+  expected.set("resources/square.png?from-2d-header&contain-8x", 1);
+  expected.set("resources/square.png?from-2d-header&wonly-8x", 1);
 }
 
 if (dpr <= 1) {
   expected.set("resources/square.png?from-2d-header&dup-first", 1);
 } else if (dpr <= 2) {
   expected.set("resources/square.png?from-2d-header&dup-2x", 1);
-} else {
+} else if (dpr <= 4) {
   expected.set("resources/square.png?from-2d-header&dup-4x", 1);
+} else {
+  expected.set("resources/square.png?from-2d-header&dup-8x", 1);
 }
 
 promise_test(async t => {
@@ -86,6 +96,8 @@ promise_test(async t => {
   await t.step_wait(() => {
     return headerGroups.every(group => group.some(u => numberOfResourceTimingEntries(u) >= 1));
   }, "all Link header preloads completed", 5000, 50);
+
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
   for (const [url, count] of expected) {
     verifyNumberOfResourceTimingEntries(url, count);
