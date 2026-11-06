@@ -11,9 +11,7 @@ def test_atspi(atspi, session, inline):
     # State: STATE_HAS_POPUP
 
     node = atspi.find_node("test", session.url)
-    assert atspi.Accessible.get_role(node) == atspi.Role.COMBO_BOX
-    assert "STATE_EXPANDABLE" in atspi.get_state_list_helper(node)
-    assert "STATE_HAS_POPUP" in atspi.get_state_list_helper(node)
+    atspi.assert_role_mapping(node, "combobox")
 
 # def test_axapi(axapi, session, inline):
 #     session.url = inline(TEST_HTML)
