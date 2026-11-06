@@ -245,4 +245,27 @@ promise_test(async t => {
   assert_equals(iframe.contentWindow.devicePixelRatio, 2 * dpr);
   await t.step_wait(() => img.currentSrc === u2, "img re-selected the 2x 2D candidate", 1500);
 }, "dynamic zoom change on the iframe re-selects the 2D sizes + h descriptor image source");
+
+promise_test(async t => {
+  const u1 = imageUrl("2d-dyn-vh-small");
+  const u2 = imageUrl("2d-dyn-vh-large");
+  const iframe = document.createElement("iframe");
+  t.add_cleanup(() => iframe.remove());
+  iframe.style.cssText = "width: 128px; height: 64px; border: 0";
+  document.body.appendChild(iframe);
+  await new Promise(resolve => {
+    iframe.addEventListener("load", resolve, { once: true });
+    iframe.srcdoc = `<!doctype html>
+      <img sizes="cover 100vw 100vh, 2048px"
+           srcset="${u1} ${pair(1, 1, 1, 128)}, ${u2} ${pair(1, 1, 1, 256)}">`;
+  });
+  const img = iframe.contentDocument.querySelector("img");
+  // In the 128x64 iframe, cover 100vw 100vh = 128px -> u1 (1x DPR); 1D 2048px would pick u2.
+  assert_equals(img.currentSrc, u1);
+
+  // Increasing iframe height to 256px increases 100vh to 256px -> concreteWidth = 256px -> u2.
+  iframe.style.height = "256px";
+  iframe.offsetHeight;
+  await t.step_wait(() => img.currentSrc === u2, "img re-selected the 256px 2D candidate on iframe height resize", 1500);
+}, "dynamic iframe viewport height change re-selects the 2D sizes + h descriptor image source");
 </script>

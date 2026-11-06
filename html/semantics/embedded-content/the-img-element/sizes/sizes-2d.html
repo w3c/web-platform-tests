@@ -695,34 +695,58 @@ onload = () => {
     assert_equals(img.currentSrc.split('?')[0], ref2);
   }, 'A preceding <source> with an unsupported type does not override <img> dimension attribute aspect ratio');
 
-  // 2D sizes inside an <iframe> uses the iframe's own viewport (vw vs vh) and
-  // re-selects on dynamic iframe viewport height resize.
+  // 2D sizes inside an <iframe> resolves vw and vh against the iframe's own
+  // viewport width and height rather than the outer browsing context.
   async_promise_test(async (t) => {
     const ref1 = document.getElementById('ref1').currentSrc.split('?')[0];
     const ref2 = document.getElementById('ref2').currentSrc.split('?')[0];
-    const iframe = document.createElement('iframe');
-    t.add_cleanup(() => iframe.remove());
-    iframe.style.cssText = 'width: 100px; height: 10px; border: 0';
-    const iframeLoaded = new Promise(resolve => { iframe.onload = resolve; });
-    iframe.srcdoc = '<!doctype html><body></body>';
-    document.body.appendChild(iframe);
-    await iframeLoaded;
 
-    const img = iframe.contentDocument.createElement('img');
-    img.sizes = 'cover 10vw 100vh, 1000px';
-    img.srcset = srcsetFor('iframe-vw-vh', [' 50h', ' 51h']);
-    const initialLoaded = waitForLoad(t, img);
-    iframe.contentDocument.body.appendChild(img);
-    await initialLoaded;
-    // 10vw = 10px and 100vh = 10px in the 100x10 iframe -> max(10px, 10px) = 10px (ref1).
-    assert_equals(img.currentSrc.split('?')[0], ref1);
+    async function createIframe(width, height) {
+      const iframe = document.createElement('iframe');
+      t.add_cleanup(() => iframe.remove());
+      iframe.style.cssText = `width: ${width}px; height: ${height}px; border: 0`;
+      const loaded = new Promise(resolve => { iframe.onload = resolve; });
+      iframe.srcdoc = '<!doctype html><body></body>';
+      document.body.appendChild(iframe);
+      await loaded;
+      assert_equals(iframe.contentWindow.innerWidth, width);
+      assert_equals(iframe.contentWindow.innerHeight, height);
+      return iframe;
+    }
 
-    const reloaded = waitForLoad(t, img);
-    iframe.style.height = '200px';
-    await reloaded;
-    // 100vh = 200px in the resized 100x200 iframe -> max(10px, 200px) = 200px (ref2).
-    assert_equals(img.currentSrc.split('?')[0], ref2);
-  }, '2D sizes in an <iframe> uses the iframe viewport for vw/vh and re-selects when iframe height changes');
+    // 10vw = 10px and 100vh = 10px in the 100x10 iframe -> max(10px, 10px) = 10px (ref1);
+    // outer viewport (~800x600) or 1D fallback (1000px) would select ref2.
+    const smallIframe = await createIframe(100, 10);
+    const smallImg = smallIframe.contentDocument.createElement('img');
+    smallImg.sizes = 'cover 10vw 100vh, 1000px';
+    smallImg.srcset = srcsetFor('iframe-vw-vh-small', [' 50h', ' 51h']);
+    const smallImgLoaded = waitForLoad(t, smallImg);
+    smallIframe.contentDocument.body.appendChild(smallImg);
+    await smallImgLoaded;
+    assert_equals(smallImg.currentSrc.split('?')[0], ref1);
+
+    // 500vw = 1000px and 10vh = 1px in the 200x10 iframe -> max(1000px, 1px) = 1000px (ref2);
+    // 0x0 viewport or 1D fallback (1px) would select ref1.
+    const wideIframe = await createIframe(200, 10);
+    const wideImg = wideIframe.contentDocument.createElement('img');
+    wideImg.sizes = 'cover 500vw 10vh, 1px';
+    wideImg.srcset = srcsetFor('iframe-vw-vh-wide', [' 50h', ' 51h']);
+    const wideImgLoaded = waitForLoad(t, wideImg);
+    wideIframe.contentDocument.body.appendChild(wideImg);
+    await wideImgLoaded;
+    assert_equals(wideImg.currentSrc.split('?')[0], ref2);
+
+    // 10vw = 1px and 500vh = 1000px in the 10x200 iframe -> max(1px, 1000px) = 1000px (ref2);
+    // 0x0 viewport, using vw for vh (50px), or 1D fallback (1px) would select ref1.
+    const tallIframe = await createIframe(10, 200);
+    const tallImg = tallIframe.contentDocument.createElement('img');
+    tallImg.sizes = 'cover 10vw 500vh, 1px';
+    tallImg.srcset = srcsetFor('iframe-vw-vh-tall', [' 50h', ' 51h']);
+    const tallImgLoaded = waitForLoad(t, tallImg);
+    tallIframe.contentDocument.body.appendChild(tallImg);
+    await tallImgLoaded;
+    assert_equals(tallImg.currentSrc.split('?')[0], ref2);
+  }, '2D sizes in an <iframe> resolves vw and vh against the iframe viewport');
 
   done();
 }
