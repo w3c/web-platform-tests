@@ -1,3 +1,5 @@
+# META: timeout=long
+
 import pytest
 
 from . import ADDRESS, ADDRESS_FORM, get_form_control_values

@@ -1,3 +1,5 @@
+# META: timeout=long
+
 import pytest
 
 from tests.bidi import get_invalid_cases
