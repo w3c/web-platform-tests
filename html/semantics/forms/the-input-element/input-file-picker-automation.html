@@ -22,9 +22,12 @@ promise_test(async t => {
       {
         type: 'file',
         path: 'hello.txt',
-        data: btoa('Hello Input File!\n'),
+        data: {type: 'string', value: 'Hello Input File!\n'},
       },
     ],
+  });
+  t.add_cleanup(async () => {
+    await test_driver.remove_temporary_directory({path: dirPath});
   });
 
   await test_driver.set_file_picker_behavior({
@@ -51,9 +54,12 @@ promise_test(async t => {
 
   const {path: dirPath} = await test_driver.create_temporary_directory({
     entries: [
-      {type: 'file', path: 'first.txt', data: btoa('First')},
-      {type: 'file', path: 'second.txt', data: btoa('Second')},
+      {type: 'file', path: 'first.txt', data: {type: 'string', value: 'First'}},
+      {type: 'file', path: 'second.txt', data: {type: 'string', value: 'Second'}},
     ],
+  });
+  t.add_cleanup(async () => {
+    await test_driver.remove_temporary_directory({path: dirPath});
   });
 
   await test_driver.set_file_picker_behavior({
@@ -100,6 +106,9 @@ promise_test(async t => {
       {type: 'file', path: 'a.txt'},
       {type: 'file', path: 'b.txt'},
     ],
+  });
+  t.add_cleanup(async () => {
+    await test_driver.remove_temporary_directory({path: dirPath});
   });
 
   await test_driver.set_file_picker_behavior({

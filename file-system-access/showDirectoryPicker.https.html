@@ -20,14 +20,17 @@ promise_test(async t => {
       {
         type: 'file',
         path: 'resources/testfile.txt',
-        data: btoa('Hello World!\n'),
+        data: {type: 'string', value: 'Hello World!\n'},
       },
       {
         type: 'file',
         path: 'resources/testfile2.txt',
-        data: btoa('File to upload\n'),
+        data: {type: 'string', value: 'File to upload\n'},
       },
     ],
+  });
+  t.add_cleanup(async () => {
+    await test_driver.remove_temporary_directory({path: rootPath});
   });
 
   await test_driver.set_file_picker_behavior({
@@ -57,10 +60,13 @@ promise_test(async t => {
       {
         type: 'file',
         path: 'readonly.txt',
-        data: btoa('Cannot overwrite me'),
+        data: {type: 'string', value: 'Cannot overwrite me'},
         permissions: {readable: true, writable: false},
       },
     ],
+  });
+  t.add_cleanup(async () => {
+    await test_driver.remove_temporary_directory({path: rootPath});
   });
 
   await test_driver.set_file_picker_behavior({
@@ -92,6 +98,9 @@ promise_test(async t => {
 
   const {path: rootPath} = await test_driver.create_temporary_directory({
     entries: [{type: 'file', path: 'not_a_dir.txt'}],
+  });
+  t.add_cleanup(async () => {
+    await test_driver.remove_temporary_directory({path: rootPath});
   });
 
   await test_driver.set_file_picker_behavior({

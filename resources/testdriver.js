@@ -1237,6 +1237,24 @@
                         params);
                 },
                 /**
+                 * Removes a temporary directory previously created by
+                 * ``create_temporary_directory`` from the remote end filesystem.
+                 * Matches the `browser.removeTemporaryDirectory
+                 * <https://w3c.github.io/webdriver-bidi/#command-browser-removeTemporaryDirectory>`_
+                 * WebDriver BiDi command.
+                 *
+                 * @param {object} params - Parameters for the command.
+                 * @param {string} params.path - Path of the temporary directory
+                 * to remove.
+                 * @returns {Promise<void>} Resolves when the temporary
+                 * directory is removed.
+                 */
+                remove_temporary_directory: function (params) {
+                    assertBidiIsEnabled();
+                    return window.test_driver_internal.bidi.browser.remove_temporary_directory(
+                        params);
+                },
+                /**
                  * Pre-configures the behavior for file and directory picker
                  * dialogs.
                  * Matches the `browser.setFileDialogBehavior
@@ -2712,6 +2730,25 @@
             } catch (e) {
                 throw e instanceof TypeError ? e : new TypeError(String(e));
             }
+        },
+
+        /**
+         * Removes a temporary directory previously created by
+         * ``create_temporary_directory`` from the remote end filesystem.
+         *
+         * Matches the `browser.removeTemporaryDirectory
+         * <https://w3c.github.io/webdriver-bidi/#command-browser-removeTemporaryDirectory>`_
+         * WebDriver BiDi command.
+         *
+         * @param {object} params - Parameters for the command.
+         * @param {string} params.path - Path of the temporary directory to remove.
+         * @returns {Promise<void>} Resolves when the temporary directory is removed.
+         */
+        remove_temporary_directory: async function(params) {
+            if (typeof params !== "object" || params === null || typeof params.path !== "string") {
+                throw new TypeError("params.path must be a string");
+            }
+            return window.test_driver_internal.remove_temporary_directory(params);
         }
     };
 
@@ -2841,6 +2878,10 @@
                 create_temporary_directory: function (params) {
                     throw new Error(
                         "bidi.browser.create_temporary_directory is not implemented by testdriver-vendor.js");
+                },
+                remove_temporary_directory: function (params) {
+                    throw new Error(
+                        "bidi.browser.remove_temporary_directory is not implemented by testdriver-vendor.js");
                 },
                 set_file_dialog_behavior: function (params) {
                     throw new Error(
@@ -3114,6 +3155,10 @@
 
         async create_temporary_directory(params={}) {
             throw new Error("create_temporary_directory() is not implemented by testdriver-vendor.js");
+        },
+
+        async remove_temporary_directory(params) {
+            throw new Error("remove_temporary_directory() is not implemented by testdriver-vendor.js");
         }
     };
 })();

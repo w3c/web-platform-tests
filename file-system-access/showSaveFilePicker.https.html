@@ -14,6 +14,9 @@ promise_test(async t => {
   });
 
   const {path: dirPath} = await test_driver.create_temporary_directory();
+  t.add_cleanup(async () => {
+    await test_driver.remove_temporary_directory({path: dirPath});
+  });
   const saveFile = `${dirPath}/save_test_file.txt`;
 
   await test_driver.set_file_picker_behavior({
@@ -49,9 +52,12 @@ promise_test(async t => {
       {
         type: 'file',
         path: 'existing.txt',
-        data: btoa('Existing content to be truncated'),
+        data: {type: 'string', value: 'Existing content to be truncated'},
       },
     ],
+  });
+  t.add_cleanup(async () => {
+    await test_driver.remove_temporary_directory({path: dirPath});
   });
   const saveFile = `${dirPath}/existing.txt`;
 

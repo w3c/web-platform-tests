@@ -651,6 +651,13 @@ class BidiBrowserProtocolPart(ProtocolPart):
         pass
 
     @abstractmethod
+    async def remove_temporary_directory(
+        self,
+        path: str,
+    ) -> Any:
+        pass
+
+    @abstractmethod
     async def set_file_dialog_behavior(
         self,
         file_dialog_behavior: Optional[Mapping[str, Any]],

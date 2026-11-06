@@ -130,6 +130,14 @@ class Browser(BidiModule):
         assert isinstance(result["path"], str)
         return {"path": result["path"]}
 
+    @command
+    def remove_temporary_directory(
+            self, path: str
+    ) -> Mapping[str, Any]:
+        return {
+            "path": path
+        }
+
     def _validate_client_window(self, client_window_info: Mapping[str, Any]) -> None:
         assert isinstance(client_window_info["active"], bool)
         assert isinstance(client_window_info["clientWindow"], str)

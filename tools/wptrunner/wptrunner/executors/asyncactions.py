@@ -450,6 +450,19 @@ class BidiBrowserCreateTemporaryDirectoryAction:
         return await self.protocol.bidi_browser.create_temporary_directory(entries)
 
 
+class BidiBrowserRemoveTemporaryDirectoryAction:
+    name = "bidi.browser.remove_temporary_directory"
+
+    def __init__(self, logger, protocol):
+        do_delayed_imports()
+        self.logger = logger
+        self.protocol = protocol
+
+    async def __call__(self, payload: Mapping[str, Any]) -> Any:
+        path = payload["path"]
+        return await self.protocol.bidi_browser.remove_temporary_directory(path)
+
+
 class BidiBrowserSetFileDialogBehaviorAction:
     name = "bidi.browser.set_file_dialog_behavior"
 
@@ -485,6 +498,7 @@ async_actions = [
     BidiUserAgentClientHintsSetClientHintsOverrideAction,
     BidiPermissionsSetPermissionAction,
     BidiBrowserCreateTemporaryDirectoryAction,
+    BidiBrowserRemoveTemporaryDirectoryAction,
     BidiBrowserSetFileDialogBehaviorAction,
     BidiSessionSubscribeAction,
     BidiSessionUnsubscribeAction,

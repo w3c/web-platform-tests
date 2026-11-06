@@ -6,12 +6,15 @@ pytestmark = pytest.mark.asyncio
 
 async def test_create_empty_temporary_directory(bidi_session):
     result = await bidi_session.browser.create_temporary_directory()
-    assert isinstance(result["path"], str)
-    assert len(result["path"]) > 0
+    try:
+        assert isinstance(result["path"], str)
+        assert len(result["path"]) > 0
+    finally:
+        await bidi_session.browser.remove_temporary_directory(path=result["path"])
 
 
 async def test_create_temporary_directory_with_entries(bidi_session):
-    data = base64.b64encode(b"Hello BiDi\n").decode("ascii")
+    base64_data = base64.b64encode(b"\x00\x01\x02\xff").decode("ascii")
     result = await bidi_session.browser.create_temporary_directory(
         entries=[
             {
@@ -21,7 +24,12 @@ async def test_create_temporary_directory_with_entries(bidi_session):
             {
                 "type": "file",
                 "path": "nested/dir/hello.txt",
-                "data": data,
+                "data": {"type": "string", "value": "Hello BiDi\n"},
+            },
+            {
+                "type": "file",
+                "path": "binary.bin",
+                "data": {"type": "base64", "value": base64_data},
             },
             {
                 "type": "file",
@@ -35,8 +43,11 @@ async def test_create_temporary_directory_with_entries(bidi_session):
             },
         ]
     )
-    assert isinstance(result["path"], str)
-    assert len(result["path"]) > 0
+    try:
+        assert isinstance(result["path"], str)
+        assert len(result["path"]) > 0
+    finally:
+        await bidi_session.browser.remove_temporary_directory(path=result["path"])
 
 
 async def test_create_temporary_directory_permissions_descending_depth(
@@ -44,7 +55,7 @@ async def test_create_temporary_directory_permissions_descending_depth(
 ):
     # Setting writable=False on a parent directory before creating a child file
     # inside it must succeed because permissions are applied in descending
-    # depth order in a second pass.
+    # depth order after all files, directories, and symlinks are created.
     result = await bidi_session.browser.create_temporary_directory(
         entries=[
             {
@@ -59,8 +70,11 @@ async def test_create_temporary_directory_permissions_descending_depth(
             {
                 "type": "file",
                 "path": "ro_parent/child.txt",
-                "data": base64.b64encode(b"inside ro_parent").decode("ascii"),
+                "data": {"type": "string", "value": "inside ro_parent"},
             },
         ]
     )
-    assert isinstance(result["path"], str)
+    try:
+        assert isinstance(result["path"], str)
+    finally:
+        await bidi_session.browser.remove_temporary_directory(path=result["path"])

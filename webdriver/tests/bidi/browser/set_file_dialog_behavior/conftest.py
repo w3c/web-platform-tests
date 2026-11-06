@@ -1,4 +1,3 @@
-import base64
 import pytest
 import pytest_asyncio
 
@@ -18,12 +17,12 @@ async def temp_files(bidi_session):
             {
                 "type": "file",
                 "path": "file1.txt",
-                "data": base64.b64encode(b"Hello File 1").decode("ascii"),
+                "data": {"type": "string", "value": "Hello File 1"},
             },
             {
                 "type": "file",
                 "path": "file2.txt",
-                "data": base64.b64encode(b"Hello File 2").decode("ascii"),
+                "data": {"type": "string", "value": "Hello File 2"},
             },
             {
                 "type": "directory",
@@ -32,12 +31,13 @@ async def temp_files(bidi_session):
         ]
     )
     root = result["path"]
-    return {
+    yield {
         "root": root,
         "file1": f"{root}/file1.txt",
         "file2": f"{root}/file2.txt",
         "subdir": f"{root}/subdir",
     }
+    await bidi_session.browser.remove_temporary_directory(path=root)
 
 
 @pytest.fixture

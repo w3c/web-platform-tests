@@ -17,9 +17,12 @@ promise_test(async t => {
       {
         type: 'file',
         path: 'testfile.txt',
-        data: btoa('Hello World!\n'),
+        data: {type: 'string', value: 'Hello World!\n'},
       },
     ],
+  });
+  t.add_cleanup(async () => {
+    await test_driver.remove_temporary_directory({path: dirPath});
   });
   await test_driver.set_file_picker_behavior({
     type: 'accept',
@@ -57,7 +60,7 @@ promise_test(async t => {
       {
         type: 'file',
         path: 'testfile.txt',
-        data: btoa('Hello World!\n'),
+        data: {type: 'base64', value: btoa('Hello World!\n')},
       },
       {
         type: 'file',
@@ -65,6 +68,9 @@ promise_test(async t => {
         size: 16,
       },
     ],
+  });
+  t.add_cleanup(async () => {
+    await test_driver.remove_temporary_directory({path: dirPath});
   });
   await test_driver.set_file_picker_behavior({
     type: 'accept',
@@ -99,6 +105,9 @@ promise_test(async t => {
       {type: 'file', path: 'b.txt'},
     ],
   });
+  t.add_cleanup(async () => {
+    await test_driver.remove_temporary_directory({path: dirPath});
+  });
   await test_driver.set_file_picker_behavior({
     type: 'accept',
     paths: [`${dirPath}/a.txt`, `${dirPath}/b.txt`],
@@ -114,6 +123,9 @@ promise_test(async t => {
     await test_driver.set_file_picker_behavior(null);
   });
   const {path: dirPath} = await test_driver.create_temporary_directory();
+  t.add_cleanup(async () => {
+    await test_driver.remove_temporary_directory({path: dirPath});
+  });
   await test_driver.set_file_picker_behavior({
     type: 'accept',
     paths: [dirPath],
@@ -184,9 +196,12 @@ promise_test(async t => {
       {
         type: 'file',
         path: 'ro_dir/child.txt',
-        data: btoa('Inside read-only directory'),
+        data: {type: 'string', value: 'Inside read-only directory'},
       },
     ],
+  });
+  t.add_cleanup(async () => {
+    await test_driver.remove_temporary_directory({path: dirPath});
   });
   await test_driver.set_file_picker_behavior({
     type: 'accept',

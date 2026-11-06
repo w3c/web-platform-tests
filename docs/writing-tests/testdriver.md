@@ -210,8 +210,10 @@ the global scope.
 ```eval_rst
 .. js:autofunction:: test_driver.set_file_picker_behavior
 .. js:autofunction:: test_driver.create_temporary_directory
+.. js:autofunction:: test_driver.remove_temporary_directory
 .. js:autofunction:: test_driver.bidi.browser.set_file_dialog_behavior
 .. js:autofunction:: test_driver.bidi.browser.create_temporary_directory
+.. js:autofunction:: test_driver.bidi.browser.remove_temporary_directory
 ```
 
 
