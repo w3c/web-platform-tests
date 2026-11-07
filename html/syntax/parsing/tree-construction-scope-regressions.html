@@ -150,6 +150,11 @@ test(() => {
   assert_equals(context.innerHTML, "<p></p><table></table><div>x</div>");
 }, "A foreign select fragment context does not select the HTML select insertion mode");
 
+// The form ancestor initializes the fragment form pointer. For the first end
+// tag, the current node is already the synthetic html root: the foreign end-tag
+// algorithm returns at its topmost-element check, before handing it to HTML
+// rules. The ancestor's form pointer must therefore remain set.
+// https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inforeign
 test(() => {
   const form = document.createElement("form");
   const context = document.createElementNS("http://www.w3.org/2000/svg", "svg");
